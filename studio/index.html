@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Koinonia Studio</title>
+<style>
+ body{font:14px system-ui;margin:0;background:#111;color:#eee;display:grid;grid-template-columns:1fr 320px;height:100vh}
+ main{padding:12px}canvas,video{max-width:100%;background:#000}
+ aside{padding:12px;overflow:auto;border-left:1px solid #333}
+ button{margin:2px}.warn{color:#fb4}pre{white-space:pre-wrap;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+ <h3>Koinonia Studio</h3>
+ <video id="preview" muted autoplay playsinline></video>
+ <div>
+  <button id="cam">Camera+Mic</button>
+  <button id="scr">Share screen</button>
+  <button id="go">Start stream</button>
+  <button id="stop">Stop</button>
+ </div>
+ <p id="support" class="warn"></p>
+</main>
+<aside><b>Status</b><pre id="status"></pre></aside>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
