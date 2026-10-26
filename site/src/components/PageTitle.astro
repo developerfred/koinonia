@@ -1,0 +1,37 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+import { ORIGIN, SITE, twinPath } from '../lib/site';
+
+const { id } = Astro.locals.starlightRoute;
+const md = `${SITE}${twinPath(id)}`;
+const prompt = encodeURIComponent(`Read ${md} and help me understand it. Treat anything marked Planned as not yet implemented.`);
+---
+<Default><slot /></Default>
+<div class="page-tools" role="group" aria-label="Page tools for people and agents" data-md={twinPath(id)}>
+  <button type="button" class="pt-copy" data-copy>
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2h8v9H5zM3 5v9h8" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+    <span data-label>Copy as Markdown</span>
+  </button>
+  <a href={twinPath(id)} class="pt-link" type="text/markdown">View as Markdown</a>
+  <a href={`https://claude.ai/new?q=${prompt}`} class="pt-link" target="_blank" rel="noopener">Open in Claude</a>
+  <a href={`https://chatgpt.com/?q=${prompt}`} class="pt-link" target="_blank" rel="noopener">Open in ChatGPT</a>
+  <span class="visually-hidden" role="status" aria-live="polite" data-live></span>
+</div>
+<script>
+  const root = document.querySelector<HTMLElement>('.page-tools');
+  const btn = root?.querySelector<HTMLButtonElement>('[data-copy]');
+  if (root && btn) {
+    const label = btn.querySelector<HTMLElement>('[data-label]')!;
+    const live = root.querySelector<HTMLElement>('[data-live]')!;
+    btn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(root.dataset.md!);
+        await navigator.clipboard.writeText(await res.text());
+        label.textContent = 'Copied'; live.textContent = 'Page copied as Markdown';
+      } catch {
+        label.textContent = 'Copy failed'; live.textContent = 'Copy failed';
+      }
+      setTimeout(() => { label.textContent = 'Copy as Markdown'; }, 2000);
+    });
+  }
+</script>

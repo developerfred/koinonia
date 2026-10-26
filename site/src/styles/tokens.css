@@ -1,0 +1,86 @@
+@import '@fontsource-variable/fraunces/full.css';
+@import '@fontsource-variable/instrument-sans/index.css';
+@import '@fontsource-variable/martian-mono/index.css';
+@import '@fontsource-variable/noto-serif-display/wdth.css';
+
+/* Koinonia design tokens. Shared by the landing page and Starlight.
+   Palette: studio-control-room ink, bone paper, "tally" red for on-air, amber for caution, signal green for live/ok. */
+:root {
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-greek: 'Noto Serif Display Variable', 'Fraunces Variable', Georgia, serif;
+  --font-body: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Martian Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --ink: #0e0d0b;
+  --ink-2: #16140f;
+  --ink-3: #201d16;
+  --line: rgb(236 230 216 / 0.14);
+  --line-strong: rgb(236 230 216 / 0.32);
+  --bone: #f1ebdc;
+  --text: #ece6d8;
+  --muted: #aaa493;
+  --tally: #ff5636;       /* accent for text/borders on ink: 6.4:1 */
+  --tally-fill: #ff4a2b;  /* solid fills */
+  --on-tally: #170502;
+  --amber: #f2b134;
+  --signal: #7fd88a;
+  --shadow: 0 30px 80px -30px rgb(0 0 0 / 0.7);
+  --grain-opacity: 0.07;
+  color-scheme: dark;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-inout: cubic-bezier(0.87, 0, 0.13, 1);
+
+  /* Starlight mapping (dark) */
+  --sl-font: var(--font-body);
+  --sl-font-mono: var(--font-mono);
+  --sl-text-code: 0.78rem;
+  --sl-color-black: var(--ink);
+  --sl-color-gray-6: var(--ink-2);
+  --sl-color-gray-5: #2a2720;
+  --sl-color-gray-4: #5a5546;
+  --sl-color-gray-3: #a39e8e;
+  --sl-color-gray-2: #cdc7b6;
+  --sl-color-gray-1: #e6e0d0;
+  --sl-color-white: #f6f1e4;
+  --sl-color-accent-low: #3a1208;
+  --sl-color-accent: #d6391b;
+  --sl-color-accent-high: #ff9a82;
+  --sl-color-bg-nav: var(--ink);
+  --sl-color-bg-sidebar: var(--ink);
+}
+
+:root[data-theme='light'] {
+  --ink: #f6f1e4;
+  --ink-2: #ece5d2;
+  --ink-3: #e2d9c1;
+  --line: rgb(26 24 19 / 0.16);
+  --line-strong: rgb(26 24 19 / 0.4);
+  --bone: #17150f;
+  --text: #1a1813;
+  --muted: #5b5646;
+  --tally: #b8240a;       /* 5.9:1 on paper */
+  --tally-fill: #d62e10;
+  --on-tally: #fff6ee;
+  --amber: #8a5a00;
+  --signal: #1d6b2e;
+  --shadow: 0 30px 60px -30px rgb(60 40 10 / 0.35);
+  --grain-opacity: 0.09;
+  color-scheme: light;
+
+  --sl-color-black: var(--ink);
+  --sl-color-gray-7: #ece5d2;
+  --sl-color-gray-6: #ece5d2;
+  --sl-color-gray-5: #cfc7b2;
+  --sl-color-gray-4: #8a8576;
+  --sl-color-gray-3: #5b5646;
+  --sl-color-gray-2: #3f3b30;
+  --sl-color-gray-1: #2a2720;
+  --sl-color-white: #17150f;
+  --sl-color-accent-low: #f6d5cb;
+  --sl-color-accent: #b8240a;
+  --sl-color-accent-high: #8a1a06;
+}
+
+::selection { background: var(--tally-fill); color: var(--on-tally); }

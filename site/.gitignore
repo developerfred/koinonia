@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.astro/
+src/content/docs/docs/reference/tools/*.md
+!src/content/docs/docs/reference/tools/index.md

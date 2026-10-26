@@ -1,0 +1,53 @@
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.prefs { display: flex; align-items: center; gap: 0.5rem; position: relative; font: 500 0.78rem/1 var(--font-body); }
+.prefs-view, .prefs-menu > summary {
+  display: inline-flex; align-items: center; min-height: 2rem; padding: 0 0.8rem;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: transparent;
+  color: var(--text); cursor: pointer; list-style: none; font: inherit; letter-spacing: 0.02em;
+  transition: background-color 0.25s var(--ease-quart), border-color 0.25s var(--ease-quart);
+}
+.prefs-menu > summary::-webkit-details-marker { display: none; }
+.prefs-view:hover, .prefs-menu > summary:hover { background: var(--ink-3); }
+.prefs-view[aria-pressed='true'] { background: var(--tally-fill); color: var(--on-tally); border-color: var(--tally-fill); }
+.prefs :is(button, summary, input):focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
+.prefs-view .v-painel { display: inline; } .prefs-view .v-foco { display: none; }
+.prefs-view[aria-pressed='true'] .v-painel { display: none; } .prefs-view[aria-pressed='true'] .v-foco { display: inline; }
+.prefs-view::before { content: 'View: '; opacity: 0.7; margin-right: 0.25em; }
+
+.prefs-menu { position: relative; }
+.prefs-pop {
+  position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 100; width: 16rem;
+  padding: 1rem; background: var(--ink-2); color: var(--text);
+  border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow);
+  display: grid; gap: 0.9rem; font-size: 0.82rem; line-height: 1.4;
+}
+.prefs-pop fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.prefs-pop legend { padding: 0; margin-bottom: 0.3rem; font: 600 0.68rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.prefs-pop label { display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+.prefs-pop input { accent-color: var(--tally-fill); width: 1rem; height: 1rem; }
+.prefs-note { margin: 0; color: var(--muted); font-size: 0.72rem; }
+
+/* Motion off */
+html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after {
+  animation: none !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+}
+
+/* Density (applies to docs prose and landing rhythm) */
+html { --dens: 1; }
+html[data-density='compact'] { --dens: 0.8; }
+html[data-density='spacious'] { --dens: 1.25; }
+html[data-density='compact'] .sl-markdown-content { font-size: 0.92rem; line-height: 1.55; }
+html[data-density='spacious'] .sl-markdown-content { font-size: 1.1rem; line-height: 1.85; }
+
+/* Foco: Starlight docs. One column, large, calm. */
+html[data-view='foco'] { --sl-sidebar-width: 0rem; --sl-content-width: 40rem; }
+html[data-view='foco'] .sidebar-pane,
+html[data-view='foco'] .right-sidebar,
+html[data-view='foco'] mobile-starlight-toc,
+html[data-view='foco'] starlight-menu-button,
+html[data-view='foco'] .sl-markdown-content .heading-wrapper a.sl-anchor-link { display: none !important; }
+html[data-view='foco'] .main-frame { padding-inline-start: 0 !important; }
+html[data-view='foco'] .sl-markdown-content { font-size: 1.15rem; line-height: 1.8; }
+html[data-view='foco'] .content-panel { max-width: 44rem; margin-inline: auto; border-color: transparent; }
+html[data-view='foco'] .pagination-links { grid-template-columns: 1fr; }

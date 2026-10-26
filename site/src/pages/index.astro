@@ -1,0 +1,470 @@
+---
+import '../styles/tokens.css';
+import '../styles/prefs.css';
+import '../styles/landing.css';
+import Prefs from '../components/Prefs.astro';
+import { COMPONENTS, PHASES, STATUS } from '../data/status.mjs';
+import { TOOLS, GROUPS } from '../data/tools.mjs';
+import { ORIGIN, SITE, REPO } from '../lib/site';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const title = 'Koinonia: a streaming studio in a browser tab, run by agents';
+const description =
+  'Open-source live-streaming studio that runs in the browser, with a Zig daemon and WebMCP tools so AI agents can run the show. Twitch and YouTube, no OBS. Pre-alpha.';
+
+// --- Honest demo: compaction computed at build time with the same rules as ChatBuffer.since (dedupe on trimmed lowercase text, short keys) and the chars/4 estimator.
+const users = ['mika', 'dani', 'rex', 'luz', 'tom', 'bia', 'nox', 'ana', 'kai', 'zed', 'ivy', 'leo'];
+const script = [
+  'POG', 'POG', 'pog', 'qual a trilha?', 'POG', 'first time here, love the overlay', 'POG', 'F', 'F', 'F', 'F',
+  'qual a trilha?', 'POG', 'Pog', 'lol', 'lol', 'LOL', 'gg', 'gg', 'POG', 'nice one', 'F', 'POG', 'gg', 'POG',
+  'what game is this?', 'POG', 'POG', 'lol', 'F', 'gg', 'POG', 'hi from brazil', 'POG', 'POG', 'F', 'lol', 'POG',
+];
+const raw = script.map((text, i) => ({ id: 1184 + i + 1, ts: 1790453000000 + i * 1300, platform: i % 3 ? 'twitch' : 'youtube', user: users[(i * 5) % users.length], text }));
+const est = (v: unknown) => Math.ceil(JSON.stringify(v).length / 4);
+const seen = new Map<string, any>();
+const compact: any[] = [];
+for (const m of raw) {
+  const k = m.text.trim().toLowerCase();
+  const prev = seen.get(k);
+  if (prev) { prev.x = (prev.x ?? 1) + 1; continue; }
+  const o: any = { u: m.user, t: m.text };
+  compact.push(o); seen.set(k, o);
+}
+const delta = { c: raw[raw.length - 1].id, m: compact };
+const tokRaw = est(raw), tokCompact = est(delta);
+const saved = Math.round((1 - tokCompact / tokRaw) * 100);
+const fmt = (n: number) => n.toLocaleString('en-US');
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      name: 'Koinonia',
+      alternateName: 'κοινωνία',
+      description,
+      url: `${ORIGIN}/`,
+      applicationCategory: 'MultimediaApplication',
+      applicationSubCategory: 'Live streaming studio',
+      operatingSystem: 'Any (Chromium-based browser; daemon on macOS and Linux)',
+      softwareVersion: '0.1.0-pre',
+      releaseNotes: `${REPO}/blob/main/PLANO.md`,
+      license: 'https://opensource.org/licenses/MIT',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      codeRepository: REPO,
+      sameAs: [REPO],
+      programmingLanguage: ['Zig', 'TypeScript'],
+      image: `${ORIGIN}/og.png`,
+      featureList: [
+        'Browser studio with WebCodecs encoding',
+        'Zig daemon fan-out to Twitch and YouTube over RTMPS',
+        'WebMCP tools for agent control',
+        'Token-economy toolkit for cheaper agents',
+      ],
+    },
+    { '@type': 'WebSite', name: 'Koinonia', url: `${ORIGIN}/`, inLanguage: 'en' },
+  ],
+};
+
+const dots = (s: string) => STATUS[s as keyof typeof STATUS].label;
+const groups = Object.entries(GROUPS);
+---
+<!doctype html>
+<html lang="en" data-view="painel" data-density="comfortable">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={`${ORIGIN}/`} />
+  <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+  <link rel="alternate" type="text/markdown" href={`${ORIGIN}/index.md`} />
+  <link rel="alternate" type="text/plain" href={`${ORIGIN}/llms.txt`} title="llms.txt" />
+  <meta name="theme-color" content="#0e0d0b" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f6f1e4" media="(prefers-color-scheme: light)" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Koinonia" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={`${ORIGIN}/`} />
+  <meta property="og:image" content={`${ORIGIN}/og.png`} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Koinonia: the studio is a browser tab, the operator is an agent." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={`${ORIGIN}/og.png`} />
+  <script type="application/ld+json" set:html={JSON.stringify(ld)} />
+  <script is:inline>
+    (function(){var d=document.documentElement;d.classList.add('js');try{
+      var t=localStorage.getItem('starlight-theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.dataset.theme=t;
+      var p=JSON.parse(localStorage.getItem('koinonia-prefs')||'{}');if(p.view)d.dataset.view=p.view;if(p.density)d.dataset.density=p.density;if(p.motion)d.dataset.motion=p.motion;
+    }catch(e){}})();
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href={`${base}/`} aria-label="Koinonia home"><img src={`${base}/favicon.svg`} alt="" width="28" height="28" />Koinonia</a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#tools">Tools</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#tokens">Token economy</a>
+        <a href="#agents">For agents</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href={`${base}/docs/`}>Docs</a>
+        <a href={REPO}>GitHub</a>
+      </nav>
+      <Prefs />
+      <button class="theme-btn" type="button" id="theme" aria-label="Toggle light and dark theme">
+        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="10" cy="10" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 4.5a5.5 5.5 0 0 0 0 11z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="h1">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="onair after"><i class="tally" aria-hidden="true"></i>Pre-alpha &middot; open source &middot; MIT</span>
+          <h1 id="h1">
+            <span class="ln"><span style="--i:0">The studio is</span></span>
+            <span class="ln"><span style="--i:1">a <em>browser tab.</em></span></span>
+            <span class="ln"><span style="--i:2">The operator</span></span>
+            <span class="ln"><span style="--i:3">is an agent.</span></span>
+          </h1>
+          <p class="lede after"><strong>Koinonia</strong> (κοινωνία, &ldquo;sharing&rdquo;) streams to Twitch and YouTube without OBS. The browser composes and encodes; a small Zig daemon does the plumbing; <strong>WebMCP tools</strong> let an agent read chat, switch scenes and cut clips, cheaply, with a human approving anything irreversible.</p>
+          <div class="cta after">
+            <a class="btn primary" href={`${base}/docs/`}>Read the docs <span class="arr" aria-hidden="true">&rarr;</span></a>
+            <a class="btn" href={`${base}/docs/status/`}>What works today</a>
+            <a class="btn" href={REPO}>GitHub</a>
+          </div>
+          <div class="hero-meta after">
+            <span class="chip built">Token toolkit built</span>
+            <span class="chip wip">Studio, daemon, 14 tools in progress</span>
+            <span class="chip planned">Live verification pending</span>
+          </div>
+        </div>
+
+        <div class="console after" id="console" role="group" aria-label="Illustrative agent session">
+          <header><i class="tally" aria-hidden="true"></i><span>agent &harr; studio &middot; webmcp</span><span>illustrative</span></header>
+<pre aria-label="Example tool calls and responses"><span class="l"><span class="u">agent &rarr;</span> get_chat {'{'} since_cursor: 1184, limit: 30 {'}'}</span><span class="l"><span class="s">studio &larr;</span> {'{'} c: {delta.c}, m: [</span><span class="l d">          {'{'}u:"{compact[0].u}", t:"POG", x:{compact[0].x}{'}'},</span><span class="l d">          {'{'}u:"{compact[1].u}", t:"qual a trilha?", x:2{'}'}, ...</span><span class="l d">        ] {'}'}</span><span class="l k">        {fmt(tokRaw)} raw tokens &rarr; {fmt(tokCompact)} delivered</span><span class="l">&nbsp;</span><span class="l"><span class="u">agent &rarr;</span> switch_scene {'{'} scene: "gameplay" {'}'}</span><span class="l"><span class="s">studio &larr;</span> {'{'} scene: "gameplay", prev: "intro" {'}'}</span><span class="l">&nbsp;</span><span class="l"><span class="u">agent &rarr;</span> ban_user {'{'} platform: "twitch", user: "spam_bot_42" {'}'}</span><span class="l"><span class="s">studio &larr;</span> {'{'} state: "awaiting_confirmation" {'}'}</span><span class="l k">        waiting for a human to click Confirm</span></pre>
+          <div class="save"><span class="mono">chat tokens saved (this sample)</span><b>-{saved}%</b></div>
+          <p class="note">Illustrative session, not a recording; the confirmation step is a design commitment, not yet implemented. The numbers are computed at build time from the sample chat below with the same dedupe rule as the implemented chat ring and a chars/4 estimate.</p>
+        </div>
+      </div>
+      <div class="greek decor" aria-hidden="true" lang="el">κοινωνία</div>
+    </section>
+
+    <div class="ticker decor" aria-hidden="true">
+      <div class="ticker-track">
+        {[0, 1].map(() => ['Twitch', 'YouTube', 'WebCodecs', 'OffscreenCanvas', 'RTMPS', 'FLV', 'MPEG-TS', 'Zig', 'WebMCP', 'No OBS', 'No reencode'].map((w) => <span>{w}</span>))}
+      </div>
+    </div>
+
+    <section id="architecture" aria-labelledby="arch-h">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">Architecture</p>
+          <h2 id="arch-h">Encode once, in the tab. Fan out in Zig.</h2>
+          <p class="lede">Chunks are encoded by the browser (hardware when available) and handed to the daemon over a WebSocket. <strong>No re-encode.</strong> The daemon muxes FLV for both platforms and MPEG-TS for the clipper.</p>
+        </div>
+        <figure class="pipe-fig rv" style="margin:0">
+          <svg viewBox="0 0 1000 380" role="img" aria-labelledby="pf-t pf-d">
+            <title id="pf-t">Koinonia data and control paths</title>
+            <desc id="pf-d">Capture feeds a Worker compositor, then WebCodecs. Encoded frames travel over WebSocket to the Zig daemon, which sends RTMPS to Twitch and YouTube and writes a clip buffer. An agent calls WebMCP tools in the studio; a token layer compacts the output.</desc>
+            <text class="sub" x="30" y="40">BROWSER STUDIO</text>
+            <rect x="14" y="48" width="535" height="104" rx="10" fill="none" stroke="var(--line)" stroke-dasharray="3 5"/>
+            <text class="sub" x="590" y="40">ZIG DAEMON koinonia-d</text>
+            <rect x="574" y="48" width="170" height="104" rx="10" fill="none" stroke="var(--line)" stroke-dasharray="3 5"/>
+            <g class="node wip"><rect x="30" y="70" width="140" height="64" rx="8"/><text x="46" y="98">getUserMedia</text><text class="sub" x="46" y="117">+ DisplayMedia</text></g>
+            <g class="node wip"><rect x="205" y="70" width="150" height="64" rx="8"/><text x="221" y="98">Worker</text><text class="sub" x="221" y="117">OffscreenCanvas</text></g>
+            <g class="node wip"><rect x="390" y="70" width="140" height="64" rx="8"/><text x="406" y="98">WebCodecs</text><text class="sub" x="406" y="117">H.264 / AAC</text></g>
+            <g class="node wip"><rect x="590" y="70" width="140" height="64" rx="8"/><text x="606" y="98">FLV + MPEG-TS</text><text class="sub" x="606" y="117">no reencode</text></g>
+            <g class="node wip"><rect x="800" y="30" width="170" height="50" rx="8"/><text x="816" y="60">RTMPS Twitch</text></g>
+            <g class="node wip"><rect x="800" y="100" width="170" height="50" rx="8"/><text x="816" y="130">RTMPS YouTube</text></g>
+            <g class="node wip"><rect x="800" y="170" width="170" height="50" rx="8"/><text x="816" y="200">Clip ring buffer</text></g>
+            <path class="wire" d="M170 102H205M355 102H390M530 102H590"/>
+            <path class="wire" d="M730 102 765 102 765 55 800 55M765 102V125H800M765 102V195H800"/>
+            <text class="sub" x="540" y="172">WebSocket ingest, loopback</text>
+            <g class="node planned"><rect x="30" y="270" width="170" height="64" rx="8"/><text x="46" y="298">Agent</text><text class="sub" x="46" y="317">any MCP client</text></g>
+            <g class="node wip"><rect x="280" y="270" width="200" height="64" rx="8"/><text x="296" y="298">navigator.modelContext</text><text class="sub" x="296" y="317">WebMCP tool registry</text></g>
+            <g class="node built"><rect x="570" y="270" width="200" height="64" rx="8"/><text x="586" y="298">@koinonia/tokens</text><text class="sub" x="586" y="317">cursors, compaction</text></g>
+            <path class="wire ctl" d="M200 302H280M770 302H800" opacity="0"/>
+            <path class="wire ctl" d="M200 302H280"/>
+            <path class="wire ctl" d="M380 270C380 220 280 200 280 134"/>
+            <path class="wire ctl" d="M570 302H480"/>
+            <text class="sub" x="300" y="360">tool calls in, compact results out</text>
+          </svg>
+        </figure>
+        <div class="legend">
+          <span class="chip built">Built</span><span class="chip wip">In progress</span><span class="chip planned">Planned</span>
+          <span class="sub" style="color:var(--muted);font-size:.85rem">Outlines show the status of each component. Wires are data (red) and control (amber).</span>
+        </div>
+        <div class="arch-points">
+          <div class="rv"><h3>Browser is the studio</h3><p>Scenes compose in a Worker so the UI never drops frames. Hardware encoding where the browser offers it. Phase 0 spikes check background-tab frame rate and AAC support.</p></div>
+          <div class="rv" style="--i:1"><h3>Zig is the plumbing</h3><p>One small binary receives frames, writes FLV to two RTMPS outputs in parallel, and keeps an MPEG-TS ring for clips. It never touches pixels.</p></div>
+          <div class="rv" style="--i:2"><h3>WebMCP is the hand</h3><p>The page registers tools with <code>navigator.modelContext</code>. A call is one Promise; &ldquo;streaming&rdquo; is a cursor plus live state.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tools" aria-labelledby="tools-h" style="background:var(--ink-2)">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">WebMCP tools</p>
+          <h2 id="tools-h">{TOOLS.length} tools. Reversible by default.</h2>
+          <p class="lede">Every tool has a schema, an example and a status. Anything that can hurt, a ban or going live, is designed to wait for a human click; that gate is not built yet.</p>
+        </div>
+        <div class="filters" role="group" aria-label="Filter tools by group" id="tool-filters">
+          <button type="button" aria-pressed="true" data-g="all">All</button>
+          {groups.map(([id, g]) => <button type="button" aria-pressed="false" data-g={id}>{g.title}</button>)}
+        </div>
+        <div class="tool-grid" id="tool-grid">
+          {TOOLS.map((t) => (
+            <a class="tool" href={`${base}/docs/reference/tools/${t.group}/#${t.name}`} data-g={t.group}>
+              <code>{t.name}</code>
+              <p>{t.summary}</p>
+              <span class="chips">
+                <span class={`chip ${t.status}`}>{dots(t.status)}</span>
+                {t.sensitive && <span class="chip lock">Confirm gate planned</span>}
+              </span>
+            </a>
+          ))}
+        </div>
+        <p class="tool-more"><a class="btn" href={`${base}/docs/reference/tools/`}>All tools</a></p>
+      </div>
+    </section>
+
+    <section id="tokens" aria-labelledby="tok-h">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">Token economy</p>
+          <h2 id="tok-h">An agent that watches chat all day should not cost a salary.</h2>
+        </div>
+        <div class="stat-row rv">
+          <div class="big-num" aria-label={`${saved} percent fewer tokens in this sample`}>-{saved}%</div>
+          <p>tokens on a {raw.length}-message chat burst, from deduping repeats and shortening keys. Real code (<code>ChatBuffer.since</code>), a rough chars/4 estimate, one sample. Your chat will differ.</p>
+        </div>
+        <div class="compare rv">
+          <div class="pane"><h3><span>Raw feed</span><b>~{fmt(tokRaw)} tokens</b></h3><pre tabindex="0" aria-label="Raw chat JSON">{JSON.stringify(raw.slice(0, 8), null, 1).replace(/\n\s*/g, ' ').replace(/\}, \{/g, '},\n{')}
+… {raw.length - 8} more</pre></div>
+          <div class="pane good"><h3><span>Delta, deduped</span><b>~{fmt(tokCompact)} tokens</b></h3><pre tabindex="0" aria-label="Compact chat delta JSON">{JSON.stringify(delta).replace(/\},\{/g, '},\n{').replace('"m":[', '"m":[\n')}</pre></div>
+        </div>
+        <div class="two-col">
+          <div class="rv">
+            <h3>Consume <span class="chip built">Toolkit built</span></h3>
+            <ul>
+              <li>Cursor deltas, never full state</li>
+              <li>Chat deduped, clustered and capped</li>
+              <li><code>fields</code> and <code>verbosity</code> on every output</li>
+              <li>Tools registered only when relevant</li>
+            </ul>
+          </div>
+          <div class="rv" style="--i:1">
+            <h3>Spend <span class="chip built">Toolkit built</span></h3>
+            <ul>
+              <li>Route simple tasks to small models, hard ones to large (router built)</li>
+              <li>Cache stable prefixes (system, tools, house rules)</li>
+              <li>Budgets, alerts, graceful degradation (tracker built, loop wiring pending)</li>
+              <li>Semantic cache, event batching, rolling summary</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="views" aria-labelledby="views-h" style="background:var(--ink-2)">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">Two views</p>
+          <h2 id="views-h">Foco when you need calm. Painel when you need it all.</h2>
+          <p class="lede">Switch any time with <kbd class="mono" style="border:1px solid var(--line-strong);border-radius:4px;padding:.1rem .4rem">Alt+Shift+V</kbd>, without losing state. This page already does it: try the View button in the header. Low cognitive load, adjustable density, motion you can turn off, AA contrast, keyboard first.</p>
+        </div>
+        <div class="views">
+          <div class="view-card rv"><div class="mini foco" aria-hidden="true"><i></i><i></i><i></i></div><h3>Foco</h3><p>One thing at a time, large and calm, with an obvious next step. For setup, first lives and quiet moments.</p></div>
+          <div class="view-card rv" style="--i:1"><div class="mini painel" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><h3>Painel</h3><p>Everything visible and dense, for operators who know the tool. Same state, same undo.</p></div>
+        </div>
+        <p style="margin-top:1.5rem"><a class="btn" href={`${base}/docs/guides/ux-accessibility/`}>UX and accessibility principles <span class="arr" aria-hidden="true">&rarr;</span></a></p>
+      </div>
+    </section>
+
+    <section id="security" aria-labelledby="sec-h">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">Security model</p>
+          <h2 id="sec-h">An agent proposes. A human approves.</h2>
+          <p class="lede">Design commitments plus what the protocol document already specifies. Not audited, not yet verified against live platforms.</p>
+        </div>
+        <div class="sec-grid">
+          <div class="rv"><span class="chip lock">Keys</span><h3>Stream keys never logged</h3><p>Passed to the daemon through the environment, redacted from every log line, never sent to the browser or any tool.</p></div>
+          <div class="rv" style="--i:1"><span class="chip lock">Humans</span><h3>Confirmation for sensitive actions</h3><p><code>ban_user</code> always asks. Going live asks by default. Confirmations are single-use and bound to the exact arguments.</p></div>
+          <div class="rv" style="--i:2"><span class="chip lock">Surface</span><h3>Small, local, validated</h3><p>Daemon on loopback, origin-checked, token-gated. Tool inputs validated at the boundary. Chat is treated as untrusted data.</p></div>
+        </div>
+        <div class="confirm rv" role="img" aria-label="Mock confirmation prompt: Agent requests ban_user for spam_bot_42 on Twitch. Deny or Confirm.">
+          <span class="chip lock">Needs you</span>
+          <code>ban_user twitch/spam_bot_42 &middot; "link spam"</code>
+          <span class="fake" aria-hidden="true"><span>Deny</span><span>Confirm</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="agents" aria-labelledby="ag-h" style="background:var(--ink-2)">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">For agents</p>
+          <h2 id="ag-h">These docs are an API, too.</h2>
+          <p class="lede">Plain-text indexes, a Markdown twin of every page, structured data, and WebMCP tools registered on this very site.</p>
+        </div>
+        <div class="agent-grid">
+          <ul class="surfaces rv">
+            {[
+              ['/llms.txt', 'Index, one line per page. Start here.'],
+              ['/llms-full.txt', 'Entire documentation in one file.'],
+              ['/docs/security.md', 'Markdown twin: append .md to any docs URL.'],
+              ['/search-index.json', 'Static search index used by the tools.'],
+              ['/sitemap-index.xml', 'Sitemap.'],
+            ].map(([p, d]) => (
+              <li><code>{ORIGIN}{p}</code><span>{d}</span><button type="button" data-copy={`${ORIGIN}${p}`}>Copy URL</button></li>
+            ))}
+          </ul>
+          <div class="try rv" style="--i:1">
+            <p class="webmcp-state"><i aria-hidden="true"></i><span id="webmcp-label">Checking for WebMCP&hellip;</span></p>
+            <p style="color:var(--muted);font-size:.92rem">Tools registered here when your browser supports <code>navigator.modelContext</code>: <code>search_docs</code>, <code>get_page</code>, <code>list_pages</code>. Try the same search yourself:</p>
+            <form id="try-form" role="search">
+              <label class="visually-hidden" for="try-q">Search the docs</label>
+              <input id="try-q" type="search" placeholder="e.g. stream key, cursor, clip" autocomplete="off" />
+              <button class="btn" type="submit">search_docs</button>
+            </form>
+            <ol id="try-out" aria-live="polite"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="status" aria-labelledby="st-h">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">Honest status</p>
+          <h2 id="st-h">What exists, what does not.</h2>
+          <p class="lede">Checked against the repository, not the plan. If it is not built, it says so.</p>
+        </div>
+        <div class="ledger-wrap rv">
+          <table class="ledger">
+            <caption class="visually-hidden">Implementation status of each component</caption>
+            <thead><tr><th scope="col">Component</th><th scope="col">Status</th><th scope="col">Where</th><th scope="col">Notes</th></tr></thead>
+            <tbody>
+              {COMPONENTS.map((c) => (
+                <tr><td>{c.name}</td><td><span class={`chip ${c.status}`}>{dots(c.status)}</span></td><td class="where">{c.where}</td><td class="note">{c.note}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap" aria-labelledby="rm-h" style="background:var(--ink-2)">
+      <div class="wrap">
+        <div class="sec-head rv">
+          <p class="eyebrow">Roadmap</p>
+          <h2 id="rm-h">Thirteen phases, retire risk first.</h2>
+          <p class="lede">From the two browser risk spikes to vertical clips, unified chat, automatic post-live and onboarding. <a href={`${base}/docs/roadmap/`}>Full roadmap</a>.</p>
+        </div>
+        <ol class="phases rv">
+          {PHASES.map((p) => (
+            <li data-s={p.status}><span class="n" aria-hidden="true">{String(p.n).padStart(2, '0')}</span><h3><span class="visually-hidden">Phase {p.n}: </span>{p.title}</h3><p>{p.body}</p><span class={`chip ${p.status}`}>{dots(p.status)}</span></li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="closing" aria-labelledby="cl-h">
+      <div class="wrap">
+        <h2 id="cl-h" class="rv">Come build the quiet part of live.</h2>
+        <div class="cta rv"><a class="btn primary" href={`${base}/docs/contributing/`}>Contribute <span class="arr" aria-hidden="true">&rarr;</span></a><a class="btn" href={REPO}>Star on GitHub</a></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Koinonia &middot; MIT &middot; κοινωνία, &ldquo;sharing&rdquo;</p>
+      <ul>
+        <li><a href={`${base}/docs/`}>Docs</a></li>
+        <li><a href={`${base}/docs/security/`}>Security</a></li>
+        <li><a href={`${base}/llms.txt`}>llms.txt</a></li>
+        <li><a href={`${base}/index.md`}>This page as Markdown</a></li>
+        <li><a href={REPO}>GitHub</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    import '../scripts/prefs.ts';
+    import { registerDocsTools, searchDocs } from '../scripts/docs-tools';
+
+    // theme (shares Starlight's storage key)
+    document.getElementById('theme')?.addEventListener('click', () => {
+      const d = document.documentElement;
+      const next = d.dataset.theme === 'light' ? 'dark' : 'light';
+      d.dataset.theme = next;
+      try { localStorage.setItem('starlight-theme', next); } catch {}
+    });
+
+    // reveal on scroll
+    const rv = document.querySelectorAll('.rv');
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+      rv.forEach((el) => io.observe(el));
+    } else rv.forEach((el) => el.classList.add('in'));
+
+    // tool filter
+    const filters = document.getElementById('tool-filters');
+    filters?.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest('button');
+      if (!b) return;
+      filters.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      document.querySelectorAll<HTMLElement>('#tool-grid .tool').forEach((t) => { t.hidden = b.dataset.g !== 'all' && t.dataset.g !== b.dataset.g; });
+    });
+
+    // console: reveal lines in sequence
+    const pre = document.querySelector('#console pre');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (pre && !reduce && document.documentElement.dataset.motion !== 'off') {
+      const lines = [...pre.querySelectorAll<HTMLElement>('.l')];
+      lines.forEach((l) => (l.style.opacity = '0'));
+      lines.forEach((l, i) => setTimeout(() => { l.style.transition = 'opacity .5s cubic-bezier(.16,1,.3,1)'; l.style.opacity = '1'; }, 900 + i * 380));
+    }
+
+    // copy buttons
+    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy!); b.textContent = 'Copied'; } catch { b.textContent = 'Copy failed'; }
+      setTimeout(() => (b.textContent = 'Copy URL'), 1800);
+    }));
+
+    // webmcp state + try box
+    const state = registerDocsTools();
+    const label = document.getElementById('webmcp-label');
+    if (label) label.textContent = state === 'registered' ? 'WebMCP detected: 3 tools registered on this page' : 'WebMCP not detected in this browser (tools register automatically where available)';
+    const form = document.getElementById('try-form') as HTMLFormElement | null;
+    const out = document.getElementById('try-out')!;
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const q = (document.getElementById('try-q') as HTMLInputElement).value.trim();
+      if (!q) return;
+      const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const res = await searchDocs(q, 5);
+      out.replaceChildren(...(res.length ? res : [{ path: '', title: 'No results', description: '', snippet: '' }]).map((r) => {
+        const li = document.createElement('li');
+        const a = document.createElement(r.path ? 'a' : 'span'); a.textContent = r.title;
+        if (r.path) (a as HTMLAnchorElement).href = r.path;
+        const s = document.createElement('small'); s.textContent = r.description;
+        li.append(a, s); return li;
+      }));
+    });
+  </script>
+</body>
+</html>

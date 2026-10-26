@@ -1,0 +1,38 @@
+/* Starlight refinements */
+:root {
+  --sl-content-width: 46rem;
+}
+.sl-markdown-content :is(h1, h2, h3, h4),
+.content-panel h1,
+h1#_top {
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 96, 'SOFT' 30, 'WONK' 0;
+  letter-spacing: -0.02em;
+  font-weight: 560;
+}
+h1#_top { font-size: clamp(2.4rem, 5vw, 3.6rem); line-height: 1.02; letter-spacing: -0.035em; text-wrap: balance; }
+.sl-markdown-content h2 { font-size: 1.75rem; margin-top: 2.6rem; }
+.sl-markdown-content code { font-feature-settings: 'zero' 1; }
+.site-title { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; font-size: 1.25rem; }
+.site-title img { width: 1.6rem; height: 1.6rem; }
+
+.page-tools {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem;
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.02em;
+}
+.page-tools > :is(a, button) {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.7rem; border: 1px solid var(--line-strong); border-radius: 999px;
+  background: transparent; color: var(--sl-color-gray-2); text-decoration: none; cursor: pointer;
+  transition: background-color 0.25s var(--ease-quart), color 0.25s var(--ease-quart), border-color 0.25s var(--ease-quart);
+}
+.page-tools > :is(a, button):hover { background: var(--sl-color-accent-low); color: var(--sl-color-white); border-color: var(--sl-color-accent); }
+.page-tools > :is(a, button):focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
+
+figure.arch { margin: 2rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: 10px; background: var(--ink-2); color: var(--sl-color-gray-2); }
+figure.arch svg { width: 100%; height: auto; display: block; }
+figure.arch figcaption { font-size: 0.8rem; color: var(--sl-color-gray-3); margin-top: 0.75rem; }
+
+table { font-size: 0.9rem; }
+a:focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.001ms !important; animation: none !important; } }

@@ -1,0 +1,33 @@
+---
+// Display controls: view toggle (Foco/Painel), density, motion. Behaviour in src/scripts/prefs.ts.
+---
+<div class="prefs">
+  <button type="button" class="prefs-view" data-view-toggle aria-pressed="false" aria-keyshortcuts="Alt+Shift+V" title="Toggle Foco / Painel (Alt+Shift+V)">
+    <span class="v-foco">Foco</span><span class="v-painel">Painel</span>
+  </button>
+  <details class="prefs-menu">
+    <summary aria-label="Display options">Display</summary>
+    <div class="prefs-pop">
+      <fieldset>
+        <legend>View</legend>
+        <label><input type="radio" name="pref-view" data-pref="view" value="painel" /> Painel: everything visible</label>
+        <label><input type="radio" name="pref-view" data-pref="view" value="foco" /> Foco: one thing at a time</label>
+      </fieldset>
+      <fieldset>
+        <legend>Density</legend>
+        <label><input type="radio" name="pref-density" data-pref="density" value="compact" /> Compact</label>
+        <label><input type="radio" name="pref-density" data-pref="density" value="comfortable" /> Comfortable</label>
+        <label><input type="radio" name="pref-density" data-pref="density" value="spacious" /> Spacious</label>
+      </fieldset>
+      <fieldset>
+        <legend>Motion</legend>
+        <label><input type="checkbox" data-pref="motion" data-on="off" data-off="auto" /> Turn motion off</label>
+      </fieldset>
+      <p class="prefs-note">Saved in this browser only. Shortcut: Alt+Shift+V.</p>
+    </div>
+  </details>
+  <span class="visually-hidden" role="status" aria-live="polite" data-prefs-live></span>
+</div>
+<script>
+  import '../scripts/prefs.ts';
+</script>
