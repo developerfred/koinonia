@@ -1,0 +1,6 @@
+{
+  "_doc": "Per-component unit-test coverage floors enforced by `make qa` and CI. Ratchet UP only (measured 2026-10-26: tokens 92/76/89, studio ~40 lines excluding browser-only code, agents 90/76/87).",
+  "tokens": { "lines": 85, "statements": 85, "functions": 80, "branches": 70 },
+  "studio": { "lines": 35, "statements": 35, "functions": 70, "branches": 70, "exclude": ["src/worker/**", "src/main.ts"] },
+  "agents": { "lines": 85, "statements": 85, "functions": 80, "branches": 70 }
+}

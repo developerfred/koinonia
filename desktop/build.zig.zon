@@ -1,0 +1,17 @@
+.{
+    .name = .koinonia_desktop,
+    .fingerprint = 0x698c023ce279e941,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        // The daemon is imported by path, never copied. See NEEDS-DAEMON-CHANGES.md.
+        .koinonia_d = .{ .path = "../daemon" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+        "DESIGN.md",
+    },
+}

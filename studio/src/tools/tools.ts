@@ -1,4 +1,5 @@
 import type { ChatField } from "../chat/ring";
+import { MOD_TOOLS } from "../approvals";
 import type { StudioApi, ToolDef, ToolResult } from "./types";
 
 const ok = (o: unknown): ToolResult => ({ content: [{ type: "text", text: typeof o === "string" ? o : JSON.stringify(o) }] });
@@ -81,6 +82,12 @@ export function buildTools(api: StudioApi): ToolDef[] {
       { seconds_back: { type: "integer", minimum: 5, maximum: 600 }, title: { type: "string", maxLength: 100 } }, ["seconds_back"],
       async (a) => ok(await api.exportClip(num(a.seconds_back, 30), str(a.title)))),
 
+    ...moderationTools(api, t),
+
+    t("get_token_report", "Token spend vs monthly budget: {spent,budget,ratio,level,calls,savingsRatio}. verbosity=full adds per-agent/model breakdown.",
+      { verbosity: { enum: ["min", "full"] } }, [],
+      async (a) => ok(api.tokens.report(a.verbosity === "full" ? "full" : "min"))),
+
     t("query_window", "Aggregate a metric (kbps, dropped, fps, chat_rate, ...) over the last N seconds. Alerts that fired since the last call are included in `alerts`.",
       { metric: { type: "string" }, last_sec: { type: "integer", minimum: 1, maximum: 3600 },
         agg: { enum: ["avg", "min", "max", "last", "count", "rate"] } }, [],
@@ -104,4 +111,46 @@ export function buildTools(api: StudioApi): ToolDef[] {
         return ok({ id: api.metrics.addAlert(m, a.op === "lt" ? "lt" : "gt", a.threshold) });
       }),
   ];
+}
+
+type Mk = (name: string, description: string, properties: Record<string, unknown>, required: string[], execute: ToolDef["execute"]) => ToolDef;
+
+/**
+ * Moderation tools are PROPOSALS: calling one never moderates. It queues an item in the studio's approval panel
+ * (agents/humans approve there). The only way a call executes is a single-use grant minted when the human
+ * approved a request that came from the agents runtime with the same arguments.
+ */
+function moderationTools(api: StudioApi, t: Mk): ToolDef[] {
+  const platform = { enum: ["twitch", "youtube"], description: "default twitch" };
+  const reason = { type: "string", maxLength: 200 };
+  const gate = async (tool: string, raw: Record<string, unknown>, clean: Record<string, unknown>, why: string): Promise<ToolResult> => {
+    if (api.approvals.consumeGrant(tool, raw)) {
+      const r = await api.approvals.executor(tool, clean);
+      return r.ok ? ok({ status: "executed", detail: r.detail }) : err(r.detail);
+    }
+    const p = api.approvals.propose(tool, clean, why);
+    return p ? ok({ status: "pending_approval", id: p.id, note: "NOT executed. The streamer must approve it in the studio." }) : err("approval queue full");
+  };
+  const user = (a: Record<string, unknown>) => str(a.user)?.trim().replace(/^@/, "");
+  const plat = (a: Record<string, unknown>) => (a.platform === "youtube" ? "youtube" : "twitch");
+  return [
+    t("ban_user", "PROPOSE banning a chat user. Does not ban: queues it for human approval.",
+      { user: { type: "string", maxLength: 60 }, platform, reason }, ["user"], async (a) => {
+        const u = user(a); if (!u) return err("user required");
+        return gate("ban_user", a, { user: u, platform: plat(a), reason: str(a.reason) ?? "" }, `ban ${u}: ${str(a.reason) ?? ""}`);
+      }),
+    t("timeout_user", "PROPOSE a timeout for a chat user. Does not act: queues it for human approval.",
+      { user: { type: "string", maxLength: 60 }, seconds: { type: "integer", minimum: 1, maximum: 1209600 }, platform, reason }, ["user"], async (a) => {
+        const u = user(a); if (!u) return err("user required");
+        const sec = Math.min(1209600, Math.max(1, Math.round(num(a.seconds, 600))));
+        return gate("timeout_user", a, { user: u, seconds: sec, platform: plat(a), reason: str(a.reason) ?? "" }, `timeout ${u} ${sec}s: ${str(a.reason) ?? ""}`);
+      }),
+    t("delete_message", "PROPOSE deleting one chat message by id (cursor from get_chat with fields id). Queues it for human approval.",
+      { id: { type: "integer", minimum: 1 }, platform, reason }, ["id"], async (a) => {
+        const id = num(a.id, -1);
+        const m = api.chat.get(id);
+        if (!m) return err("unknown message id");
+        return gate("delete_message", a, { id, platform: m.platform, reason: str(a.reason) ?? "" }, `delete message ${id} from ${m.user}`);
+      }),
+  ].filter((x) => MOD_TOOLS.includes(x.name as never));
 }

@@ -6,3 +6,8 @@ node_modules
 *.log
 .DS_Store
 dist/
+
+# QA artifacts
+qa/.out/
+qa/test-results/
+qa/playwright-report/

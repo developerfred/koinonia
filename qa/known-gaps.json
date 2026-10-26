@@ -1,0 +1,7 @@
+{
+  "_doc": "Tests listed here are EXPECTED to fail today because of a documented gap in another component. They run as it.fails(): a listed test that starts passing fails the suite, forcing removal of the entry. Keys are test ids passed to gap().",
+  "gaps": {
+    "tokens.router.floor-raises": "tokens/src/router.ts (degradeSteps block): when cfg.floor is above the natural tier, degrading RAISES the tier (e.g. floor=medium, natural small -> degraded medium), costing more under budget pressure.",
+    "zig.amf0-commandName-u16-overflow": "daemon/src/amf0.zig:90 commandName: `3 + l` is computed in u16 (l: u16) -> integer overflow panic (UB/OOB read in ReleaseFast) for name length >= 65533; reachable from any RTMP server reply. Skipped by qa/zig/build.zig default -Dknown-gaps; run `zig build test -Dknown-gaps=none -Dfuzz-iters=100000` in qa/zig to reproduce."
+  }
+}

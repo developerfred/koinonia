@@ -44,6 +44,10 @@ export class NavigatorModelContextClient implements WebMcpClient {
 /** Minimal request/response transport (e.g. WebSocket to the studio page). */
 export interface BridgeTransport {
   request(method: "tools/list" | "tools/call", params: JsonObject): Promise<unknown>;
+  /** id-less message to the page (approvals, token usage); optional so simple transports/mocks need not implement it */
+  notify?(method: string, params: JsonObject): void;
+  /** id-less messages from the page (e.g. approval.decide) */
+  onNotification?: ((method: string, params: JsonObject) => void) | null;
   close?(): void;
 }
 
@@ -71,9 +75,12 @@ export function webSocketTransport(url: string, timeoutMs = 15000): Promise<Brid
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
     let n = 0;
+    let transport: BridgeTransport | null = null;
     const pending = new Map<number, { res: (v: unknown) => void; rej: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
-    ws.onopen = () =>
-      resolve({
+    ws.onopen = () => {
+      const t: BridgeTransport = {
+        notify: (method, params) => ws.send(JSON.stringify({ method, params })),
+        onNotification: null,
         request: (method, params) =>
           new Promise((res, rej) => {
             const id = ++n;
@@ -82,11 +89,15 @@ export function webSocketTransport(url: string, timeoutMs = 15000): Promise<Brid
             ws.send(JSON.stringify({ id, method, params }));
           }),
         close: () => ws.close(),
-      });
+      };
+      transport = t;
+      resolve(t);
+    };
     ws.onerror = () => reject(new Error(`cannot connect to ${url}`));
     ws.onmessage = (ev: { data: unknown }) => {
-      let m: { id?: number; result?: unknown; error?: { message?: string } | string };
+      let m: { id?: number; method?: string; params?: JsonObject; result?: unknown; error?: { message?: string } | string };
       try { m = JSON.parse(String(ev.data)); } catch { return; }
+      if (m.id === undefined && typeof m.method === "string") { try { transport?.onNotification?.(m.method, m.params ?? {}); } catch { /* handler bug must not kill the socket */ } return; }
       const p = m.id !== undefined ? pending.get(m.id) : undefined;
       if (!p) return;
       pending.delete(m.id!);

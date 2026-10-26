@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatBuffer } from "../src/chat/ring";
 import { MetricsStore } from "../src/metrics";
 import { SceneState } from "../src/scene";
+import { ApprovalQueue } from "../src/approvals";
 import { LIVE_UNDO_MS, STOP_UNDO_MS, mountApp } from "../src/ui/app";
 import type { AppController, UiHost } from "../src/ui/app";
 import { STORAGE_KEY } from "../src/ui/prefs";
@@ -11,7 +12,7 @@ type FakeHost = UiHost & { state: string; calls: string[] };
 function fakeHost(over: Partial<UiHost> = {}): FakeHost {
   const h: any = {
     state: "idle", calls: [] as string[],
-    chat: new ChatBuffer(50), metrics: new MetricsStore(100), scenes: new SceneState(),
+    chat: new ChatBuffer(50), metrics: new MetricsStore(100), scenes: new SceneState(), approvals: new ApprovalQueue(), tokens: {} as never,
     support: { ok: true, missing: [] }, supportMessage: "",
     setAudio: () => true,
     async startStream() { h.calls.push("start"); h.state = "live"; return { state: "live" }; },

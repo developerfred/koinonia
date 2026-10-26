@@ -1,0 +1,86 @@
+{
+ "when": "2026-10-26T21:40:23.308Z",
+ "machine": {
+  "cpu": "Apple M1",
+  "cores": 8,
+  "ram_gb": 8,
+  "os": "macOS 26.5",
+  "browser": "156.0.8078.48"
+ },
+ "config": {
+  "res": "1280x720",
+  "fps": 30,
+  "video_kbps": 3000,
+  "headless": false,
+  "seconds": 30,
+  "bgSeconds": 15
+ },
+ "notes": [],
+ "pageLoadMs": 1344,
+ "codecProbe": {
+  "webcodecs": {
+   "VideoEncoder": "function",
+   "AudioEncoder": "function",
+   "MediaStreamTrackProcessor": "function",
+   "OffscreenCanvas": "function"
+  },
+  "h264": {
+   "any": true,
+   "preferHardware": true,
+   "preferSoftware": true
+  },
+  "audio": {
+   "aac_lc": true,
+   "opus": true
+  }
+ },
+ "startStream": {
+  "state": "live"
+ },
+ "debugDiag": {
+  "wallStartMs": 1793050837932.5,
+  "framesEncoded": 0,
+  "workerFps": 0,
+  "encQueue": 0,
+  "aacChunks": 0,
+  "dests": {
+   "twitch": {
+    "state": "live",
+    "dropped": 0
+   }
+  },
+  "lastStatus": {
+   "type": "stats",
+   "uptime_ms": 14214,
+   "in_kbps": 0,
+   "dests": {
+    "twitch": {
+     "state": "live",
+     "dropped": 0
+    }
+   }
+  },
+  "errors": [
+   "audio encoder: Input audio buffer is incompatible with codec parameters"
+  ],
+  "trace": true,
+  "codecs": {
+   "video": true,
+   "audio": true
+  },
+  "logN": 0,
+  "state": "live",
+  "bp": 0
+ },
+ "fatal": "Error: RtmpSink: timeout waiting for first video frame (sessions=1, tags=1)\n    at RtmpSink.waitFor (file:///private/var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-3CXcur/sink.mjs:125:39)\n    at async file:///Users/fredericksilva/tholdres-app/studio/e2e/e2e.mjs:191:3",
+ "pageErrors": [
+  "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+ ],
+ "daemonLogTail": [
+  "koinonia-d: ws://127.0.0.1:27864/ingest  clip buffer 120s -> /var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-3CXcur/clips/",
+  "  destination: twitch (rtmp://127.0.0.1:63706/live, key ****)",
+  "info(session): ingest connected",
+  ""
+ ]
+}

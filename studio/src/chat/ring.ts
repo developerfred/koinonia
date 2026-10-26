@@ -4,6 +4,9 @@ export interface ChatMsg {
   platform: "twitch" | "youtube" | string;
   user: string;
   text: string;
+  /** platform message id / user id when the message came from a connector (needed for moderation) */
+  mid?: string;
+  uid?: string;
 }
 
 export type ChatField = "id" | "ts" | "platform" | "user" | "text";
@@ -42,6 +45,16 @@ export class ChatBuffer {
   get(id: number): ChatMsg | undefined {
     if (id < this.oldest || id >= this.next) return undefined;
     return this.buf[(id - 1) % this.capacity];
+  }
+
+  /** Most recent buffered message from this user (case-insensitive), if any. */
+  lastFrom(user: string, platform?: string): ChatMsg | undefined {
+    const u = user.trim().toLowerCase();
+    for (let id = this.next - 1; id >= this.oldest; id--) {
+      const m = this.buf[(id - 1) % this.capacity];
+      if (m && m.user.toLowerCase() === u && (!platform || m.platform === platform)) return m;
+    }
+    return undefined;
   }
 
   since(cursor = 0, opts: { limit?: number; fields?: ChatField[]; dedupe?: boolean } = {}): ChatDelta {

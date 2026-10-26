@@ -1,0 +1,22 @@
+# gitleaks configuration (used by `make secrets` and the CI "security" job).
+title = "koinonia gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately fake credentials used as test data, build artifacts"
+paths = [
+  '''^qa/security/''',
+  '''^qa/fixtures/''',
+  '''^qa/node_modules/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)\.zig-cache/''',
+  '''(^|/)zig-out/''',
+  '''^site/dist/''',
+]
+regexes = [
+  '''live_9988776655_ZzTopSecretKeyAAA''',   # fake Twitch-style key used by qa/security/stream-keys.test.ts
+  '''tok_SuperSecretIngestToken''',
+]

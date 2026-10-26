@@ -47,7 +47,7 @@ export class Orchestrator implements AgentController {
     this.clock = o.clock ?? systemClock;
     this.bus = o.bus ?? new EventBus(() => this.clock.now());
     this.audit = o.audit ?? new AuditLog({ clock: this.clock });
-    this.economist = o.economist ?? new TokenEconomist({ clock: this.clock, onAlert: (a) => void this.bus.emit("economy.alert", a) });
+    this.economist = o.economist ?? new TokenEconomist({ clock: this.clock, onAlert: (a) => void this.bus.emit("economy.alert", a), onUsage: (u) => void this.bus.emit("economy.usage", u) });
     this.sensitive = new Set(o.sensitiveTools ?? DEFAULT_SENSITIVE_TOOLS);
     this.untrustedOut = new Set(o.untrustedOutputTools ?? ["get_chat"]);
     this.approvals = new ApprovalGate(this.audit, { timeoutMs: o.approvalTimeoutMs, clock: this.clock });

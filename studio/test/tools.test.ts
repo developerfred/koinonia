@@ -5,10 +5,13 @@ import { SceneState } from "../src/scene";
 import { buildTools } from "../src/tools/tools";
 import { registerAll } from "../src/tools/webmcp";
 import type { StudioApi } from "../src/tools/types";
+import { ApprovalQueue } from "../src/approvals";
+import { TokenAccounting } from "../src/usage";
 
 function fake(): StudioApi {
   return {
     chat: new ChatBuffer(50), metrics: new MetricsStore(100, () => 1000), scenes: new SceneState(),
+    approvals: new ApprovalQueue(() => 1000), tokens: new TokenAccounting(),
     setAudio: (s) => s === "mic", startStream: async () => ({ state: "live" }), stopStream: async () => ({ state: "idle" }),
     streamState: () => "idle", captureFrame: async () => null, createPoll: () => ({ id: 1 }),
     pinMessage: (id) => id === 1, markHighlight: () => ({ id: 1, t: 5 }),
@@ -22,10 +25,10 @@ const run = async (api: StudioApi, name: string, args: Record<string, unknown> =
 };
 
 describe("tools", () => {
-  it("registers all 14 required tools with schemas", () => {
+  it("registers all 18 required tools with schemas", () => {
     const names = buildTools(fake()).map((t) => t.name).sort();
     expect(names).toEqual(["capture_frame", "create_poll", "export_clip", "get_chat", "mark_highlight", "pin_message",
-      "query_window", "set_alert", "set_audio", "set_layer", "set_overlay_text", "start_stream", "stop_stream", "switch_scene"]);
+      "query_window", "set_alert", "set_audio", "set_layer", "set_overlay_text", "start_stream", "stop_stream", "switch_scene"].concat(["ban_user", "delete_message", "get_token_report", "timeout_user"]).sort());
     for (const t of buildTools(fake())) expect(t.inputSchema.type).toBe("object");
   });
   it("get_chat is cursor/delta based and compact", async () => {
@@ -73,14 +76,14 @@ describe("webmcp registration", () => {
     const registerTool = vi.fn();
     const reg = registerAll(buildTools(fake()), { modelContext: { registerTool } } as never, {});
     expect(reg.native).toBe(true);
-    expect(registerTool).toHaveBeenCalledTimes(14);
+    expect(registerTool).toHaveBeenCalledTimes(18);
   });
   it("installs polyfill otherwise", async () => {
     const nav: Record<string, unknown> = {}; const win: Record<string, unknown> = {};
     const reg = registerAll(buildTools(fake()), nav as never, win);
     expect(reg.native).toBe(false);
     const mc = nav.modelContext as { listTools(): unknown[]; callTool(n: string, a?: object): Promise<{ content: { text: string }[] }> };
-    expect(mc.listTools()).toHaveLength(14);
+    expect(mc.listTools()).toHaveLength(18);
     expect(JSON.parse((await mc.callTool("get_chat")).content[0]!.text)).toEqual({ c: 0, m: [] });
     expect(win.__koinoniaTools).toBe(mc);
   });

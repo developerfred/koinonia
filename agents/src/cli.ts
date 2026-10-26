@@ -6,6 +6,8 @@ import { AnthropicProvider } from "./providers/anthropic.ts";
 import { EchoProvider } from "./providers/fake.ts";
 import { ChatSensor, HealthSensor } from "./sensors.ts";
 import { estimateTokens } from "../../tokens/src/index.ts";
+import { BridgeServer } from "./bridge-server.ts";
+import { linkBridge } from "./bridge-link.ts";
 import { BridgeClient, studioLikeMock, webSocketTransport } from "./webmcp.ts";
 
 const HELP = `koinonia-agents <command>
@@ -19,6 +21,9 @@ const HELP = `koinonia-agents <command>
       --bridge <ws-url>           WebSocket bridge to the studio page (required)
       --agents a,b,c             subset (default: all)
       --poll-ms <n>              sensor poll period (default 4000)
+  bridge [opts]                 Start the relay between agents and the studio page (open the studio with ?bridge=ws://127.0.0.1:<port>)
+      --port <n>                  default 9333 (env KOINONIA_BRIDGE_PORT)
+      --token <secret>            optional shared secret (env KOINONIA_BRIDGE_TOKEN); clients add ?token=
   help
 In 'run', type "approve <id>", "deny <id>", "pending", "status" or "quit" on stdin.`;
 
@@ -42,6 +47,7 @@ export async function main(argv: string[], out: Out = (s) => proc.stdout.write(s
     case "list": return list(out);
     case "dry-run": return dryRun(pos[0], f, out);
     case "run": return run(f, out);
+    case "bridge": return bridge(f, out);
     case undefined: case "help": case "--help": out(HELP); return 0;
     default: out(`unknown command '${cmd}'\n\n${HELP}`); return 2;
   }
@@ -90,16 +96,26 @@ function sample(topic: string): unknown {
   return {};
 }
 
+async function bridge(f: Record<string, string>, out: Out): Promise<number> {
+  const port = Number(f.port ?? proc.env.KOINONIA_BRIDGE_PORT ?? 9333);
+  const srv = await new BridgeServer({ port, token: f.token ?? proc.env.KOINONIA_BRIDGE_TOKEN, log: (s) => out(s) }).listen();
+  out(`bridge listening on ws://127.0.0.1:${srv.port}  (studio: ?bridge=ws://127.0.0.1:${srv.port}; agents: run --bridge ws://127.0.0.1:${srv.port})`);
+  return new Promise<number>(() => {}); // runs until killed
+}
+
 async function run(f: Record<string, string>, out: Out): Promise<number> {
   if (!f.bridge) { out("run needs --bridge <ws-url> (the studio page's WebMCP bridge)"); return 2; }
   let provider;
   try { provider = new AnthropicProvider(); } catch (e) { out(String((e as Error).message)); return 2; }
-  const client = new BridgeClient(await webSocketTransport(f.bridge));
+  const transport = await webSocketTransport(f.bridge);
+  const client = new BridgeClient(transport);
   const orch = new Orchestrator({ client, provider });
   await orch.refreshTools();
   const want = f.agents?.split(",");
   for (const d of DEFAULT_AGENTS) if (!want || want.includes(d.id)) orch.register(d);
-  orch.bus.on("approval.requested", (e) => out(`[approval] ${JSON.stringify(e.payload)}\n  -> type: approve ${(e.payload as { id: string }).id}  |  deny ${(e.payload as { id: string }).id}`));
+  // Approvals are decided in the studio page (approvals panel); stdin approve/deny below stays as a fallback.
+  const unlink = linkBridge(orch, transport, out);
+  orch.bus.on("approval.requested", (e) => out(`[approval] ${JSON.stringify(e.payload)} -> decide in the studio, or type: approve ${(e.payload as { id: string }).id} | deny ${(e.payload as { id: string }).id}`));
   orch.bus.on("economy.alert", (e) => out(`[economy] ${JSON.stringify(e.payload)}`));
   orch.start();
   const chat = new ChatSensor(client, orch.bus);
@@ -115,7 +131,7 @@ async function run(f: Record<string, string>, out: Out): Promise<number> {
       else if (c === "deny" && id) { try { orch.approvals.deny(id, "cli"); out("denied"); } catch (e) { out(String(e)); } }
       else if (c === "pending") out(JSON.stringify(orch.approvals.pending(), null, 1));
       else if (c === "status") out(JSON.stringify({ agents: orch.status(), economy: orch.economist.status() }, null, 1));
-      else if (c === "quit") { clearInterval(timer); orch.dispose(); resolve(0); }
+      else if (c === "quit") { clearInterval(timer); unlink(); orch.dispose(); resolve(0); }
     });
   });
 }

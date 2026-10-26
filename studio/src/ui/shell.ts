@@ -80,6 +80,7 @@ export function shellHtml(): string {
         <div class="field"><label for="clip-sec">${T("clips.back")}</label><select id="clip-sec"><option value="15">15 s</option><option value="30" selected>30 s</option><option value="60">60 s</option><option value="120">2 min</option></select></div>
         <div class="row"><button type="button" class="btn" id="clip-export">${T("clips.export")}</button></div>
         <ul class="list" id="clip-list"></ul>`)}
+    ${panel("approvals", "panel.approvals", `<p class="muted" id="apr-empty">${T("approvals.empty")}</p><ul class="list" id="apr-list" aria-live="polite"></ul>`)}
     ${panel("health", "panel.health", `<div class="metrics" id="health-metrics"></div><ul class="list" id="health-reasons"></ul>`)}
     ${panel("tokens", "panel.tokens", `<div class="meter" id="tok-meter" data-level="ok" role="img" aria-label=""><i style="width:0%"></i></div><p id="tok-text"></p><p class="muted" id="tok-level"></p>`)}
     ${panel("tech", "debug.status", `<p class="err" id="support-msg" hidden></p><pre class="mono" id="status" style="white-space:pre-wrap;margin:0;font-size:.85rem"></pre>`)}

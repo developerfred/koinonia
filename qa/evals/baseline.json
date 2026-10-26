@@ -1,0 +1,12 @@
+{
+  "chat.hype.saved": 0.4136,
+  "chat.hype.retention": 1,
+  "chat.qna.saved": 0.3483,
+  "chat.qna.retention": 1,
+  "chat.quiet.saved": 0.3483,
+  "chat.hype.studio_tool.saved": 0.6853,
+  "trim.health.minimal.saved": 0.6947,
+  "delta.health.cumulative.saved": 0.9224,
+  "router.cost.saved_vs_all_large": 0.4926,
+  "cache.qna.hit_rate": 0.2381
+}

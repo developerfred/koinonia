@@ -43,6 +43,8 @@ export interface EconomistOptions {
   /** Max tokens a single tool result may occupy in context. */
   toolResultMaxTokens?: number;
   onAlert?: (a: { scope: string; status: BudgetStatus }) => void;
+  /** every LLM response booked (feeds the studio token panel through the bridge) */
+  onUsage?: (u: { agent: string; model: string; task?: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number }) => void;
 }
 
 /**
@@ -110,6 +112,7 @@ export class TokenEconomist {
     this.agentTracker(agentId)?.record(total);
     const rec = { tool: agentId, task, model, inputTokens: u.inputTokens, outputTokens: u.outputTokens, cacheReadTokens: u.cacheReadTokens, cacheWriteTokens: u.cacheWriteTokens };
     const cost = this.ledger.record(rec);
+    try { this.o.onUsage?.({ agent: agentId, model, task, inputTokens: u.inputTokens, outputTokens: u.outputTokens, cacheReadTokens: u.cacheReadTokens, cacheWriteTokens: u.cacheWriteTokens }); } catch { /* observer only */ }
     this.ledger.routing(rec);
     return cost;
   }

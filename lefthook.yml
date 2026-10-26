@@ -1,0 +1,16 @@
+# Optional git hooks (https://github.com/evilmartians/lefthook): `lefthook install`.
+pre-commit:
+  parallel: true
+  commands:
+    secrets:
+      run: node qa/tools/secretscan.mjs
+    zig-fmt:
+      glob: "daemon/**/*.zig"
+      run: zig fmt --check daemon/src daemon/build.zig
+    fixtures:
+      glob: "qa/tools/gen-fixtures.mjs"
+      run: node qa/tools/gen-fixtures.mjs --check
+pre-push:
+  commands:
+    qa-fast:
+      run: make qa-fast

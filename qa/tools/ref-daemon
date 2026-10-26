@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node --experimental-transform-types --no-warnings "$(dirname "$0")/../lib/ref-daemon.mjs" "$@"

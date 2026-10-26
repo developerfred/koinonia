@@ -17,6 +17,7 @@ export interface UiHost extends StudioApi {
   supportMessage: string;
   enableCamera(): Promise<MediaStream>;
   enableScreen(): Promise<MediaStream>;
+  setTokenBudget?(n: number): void;
 }
 
 export interface AppDeps {
@@ -161,7 +162,7 @@ export function mountApp(root: HTMLElement, host: UiHost, deps: AppDeps = {}): A
     $("undo-live").hidden = !(isLive && now() < undoLiveUntil);
     $("stop-banner").hidden = !stopping;
     if (stopping) tr($("stop-text"), t("live.stopping", { s: Math.ceil(stopAction.remainingMs() / 1000) }));
-    renderScenes(); renderMixer(); renderHealth(); renderTokens();
+    renderScenes(); renderMixer(); renderHealth(); renderTokens(); if (host.approvals) renderApprovals();
     tr($("sum-scenes"), host.scenes.current);
     tr($("sum-chat"), t("chat.count", { n: chatCount }));
     const tech = { state: host.streamState(), view: prefs.view, scene: host.scenes.current, chatCursor: host.chat.cursor, support: host.support.ok };
@@ -267,7 +268,54 @@ export function mountApp(root: HTMLElement, host: UiHost, deps: AppDeps = {}): A
     const n = host.metrics.query("tokens", MONTH_SEC, "count");
     return q.v !== undefined && n.v !== undefined ? Math.round(q.v * n.v) : 0;
   }
+  // ================= aprovações (ações sensíveis propostas por ferramentas/agentes) =================
+  const aprSeen = new Set<string>();
+  function describeApproval(a: { tool: string; args: Record<string, unknown> }): string {
+    const u = String(a.args.user ?? "");
+    if (a.tool === "ban_user") return `ban ${u}`;
+    if (a.tool === "timeout_user") return `timeout ${u} ${String(a.args.seconds ?? "")}s`;
+    if (a.tool === "delete_message") return `delete #${String(a.args.id ?? "")}`;
+    return a.tool;
+  }
+  function renderApprovals() {
+    const q = host.approvals;
+    const list = q.list().slice(-30);
+    const pend = list.filter((i) => i.status === "pending");
+    $("apr-empty").hidden = list.length > 0;
+    tr($("sum-approvals"), pend.length ? t("approvals.pending", { n: pend.length }) : "");
+    const ul = $("apr-list");
+    const sig = list.map((i) => i.id + i.status + (i.result ?? "")).join("|");
+    for (const i of pend) {
+      if (aprSeen.has(i.id)) continue;
+      aprSeen.add(i.id);
+      notify("live", "warn", t("approvals.new", { what: describeApproval(i) }));
+      prefs.collapsed[prefs.view].approvals = false; applyPanels(); persist();
+    }
+    if (ul.dataset.sig === sig) return;
+    ul.dataset.sig = sig; ul.textContent = "";
+    for (const i of list.reverse()) {
+      const li = doc.createElement("li"); li.className = "apr"; li.dataset.id = i.id; li.dataset.status = i.status;
+      const head = doc.createElement("strong"); head.textContent = describeApproval(i);
+      const meta = doc.createElement("span"); meta.className = "muted";
+      meta.textContent = " · " + t(`approvals.status.${i.status}` as Key) + (i.agent ? " · " + t("approvals.by", { agent: i.agent }) : "");
+      li.append(head, meta);
+      if (i.reason) { const r = doc.createElement("div"); r.className = "muted"; r.textContent = i.reason; li.append(r); }
+      if (i.result) { const r = doc.createElement("div"); r.className = "muted"; r.textContent = i.result; li.append(r); }
+      if (i.status === "pending") {
+        const row = doc.createElement("div"); row.className = "row";
+        const ok = doc.createElement("button"); ok.type = "button"; ok.className = "btn btn-sm btn-primary"; ok.dataset.act = "approve"; ok.textContent = t("approvals.approve");
+        const no = doc.createElement("button"); no.type = "button"; no.className = "btn btn-sm"; no.dataset.act = "deny"; no.textContent = t("approvals.deny");
+        ok.addEventListener("click", () => void q.approve(i.id).then(() => say(t("approvals.status.approved")), (e) => notify("sistema", "warn", t("approvals.failed", { detail: String(e.message ?? e) }))));
+        no.addEventListener("click", () => { try { q.deny(i.id); say(t("approvals.status.denied")); } catch { /* already decided */ } });
+        row.append(ok, no); li.append(row);
+      }
+      ul.append(li);
+    }
+  }
+  const offApprovals = host.approvals?.onChange(() => renderApprovals());
+
   function renderTokens() {
+    host.setTokenBudget?.(prefs.tokenBudget);
     const spent = tokensSpent(); const b = budgetState(spent, prefs.tokenBudget);
     const meter = $("tok-meter"); meter.dataset.level = b.level;
     ($("tok-meter").firstElementChild as HTMLElement).style.width = Math.min(100, Math.round(b.ratio * 100)) + "%";
@@ -671,6 +719,6 @@ export function mountApp(root: HTMLElement, host: UiHost, deps: AppDeps = {}): A
 
   return {
     prefs: () => prefs, view: () => prefs.view, setView, toggleView, step, primary, notify, tick, notifs,
-    destroy() { doc.removeEventListener("keydown", onKey); for (const h of toastTimers.values()) clearTimeout(h); },
+    destroy() { offApprovals?.(); doc.removeEventListener("keydown", onKey); for (const h of toastTimers.values()) clearTimeout(h); },
   };
 }

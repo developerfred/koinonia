@@ -1,0 +1,21 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./site/dist",
+      "url": ["/koinonia/index.html", "/koinonia/docs/index.html", "/koinonia/docs/quickstart/index.html"],
+      "numberOfRuns": 2,
+      "settings": { "chromeFlags": "--no-sandbox" }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", { "minScore": 0.85 }],
+        "categories:accessibility": ["error", { "minScore": 0.95 }],
+        "categories:best-practices": ["error", { "minScore": 0.9 }],
+        "categories:seo": ["error", { "minScore": 0.9 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }]
+      }
+    },
+    "upload": { "target": "filesystem", "outputDir": "./qa/.out/lhci" }
+  }
+}

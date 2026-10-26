@@ -16,6 +16,9 @@ let timer: ReturnType<typeof setInterval> | undefined;
 let live = false;
 let frameN = 0, dropped = 0, renderedSince = 0, lastStats = 0;
 let t0 = 0;
+/** audio capture clock -> session clock offset (us), fixed on the first audio sample after start */
+let audioBase: number | null = null;
+let audioChunks = 0;
 
 async function pump<T extends VideoFrame | AudioData>(stream: ReadableStream<T>, on: (v: T) => void) {
   const r = stream.getReader();
@@ -48,20 +51,43 @@ function drawLayer(l: Layer) {
   // "image" layers: stubbed
 }
 
+function reportStats() {
+  const now = performance.now();
+  if (now - lastStats <= 1000) return;
+  post({ t: "stats", fps: Math.round((renderedSince * 1000) / (now - lastStats || 1)), dropped, encQueue: venc?.encodeQueueSize ?? 0, aacEncoded: audioChunks });
+  renderedSince = 0; lastStats = now;
+}
+
 function tick() {
   draw(); renderedSince++;
-  if (!live || !venc) return;
-  if (venc.encodeQueueSize > 4) { dropped++; return; }
-  const ts = Math.round((performance.now() - t0) * 1000);
-  const vf = new VideoFrame(canvas, { timestamp: ts });
-  const key = frameN % Math.max(1, cfg.fps * cfg.keyframeSec) === 0;
-  venc.encode(vf, { keyFrame: key });
-  vf.close(); frameN++;
-  const now = performance.now();
-  if (now - lastStats > 1000) {
-    post({ t: "stats", fps: Math.round((renderedSince * 1000) / (now - lastStats || 1)), dropped });
-    renderedSince = 0; lastStats = now;
+  if (live && venc) {
+    if (venc.encodeQueueSize > 4) dropped++;
+    else {
+      const ts = Math.round((performance.now() - t0) * 1000);
+      const vf = new VideoFrame(canvas, { timestamp: ts });
+      const key = frameN % Math.max(1, cfg.fps * cfg.keyframeSec) === 0;
+      try { venc.encode(vf, { keyFrame: key }); frameN++; }
+      catch (e) { post({ t: "error", msg: "video encode: " + String(e) }); }
+      vf.close();
+    }
   }
+  reportStats();
+}
+
+/** AAC encoder is configured for 48 kHz stereo (what `start` announces). Mono mics are common: duplicate to both channels. */
+let audioWarned = false;
+function toStereo48k(a: AudioData): AudioData | null {
+  if (a.sampleRate !== 48000) {
+    if (!audioWarned) { audioWarned = true; post({ t: "error", msg: `audio sample rate ${a.sampleRate} unsupported (need 48000)` }); }
+    return null;
+  }
+  if (a.numberOfChannels === 2) return a;
+  const n = a.numberOfFrames;
+  const buf = new Float32Array(n * 2);
+  a.copyTo(buf.subarray(0, n), { planeIndex: 0, format: "f32-planar" });
+  if (a.numberOfChannels > 1) a.copyTo(buf.subarray(n), { planeIndex: 1, format: "f32-planar" });
+  else buf.copyWithin(n, 0, n);
+  return new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: n, numberOfChannels: 2, timestamp: a.timestamp, data: buf });
 }
 
 function startEncoders() {
@@ -70,7 +96,7 @@ function startEncoders() {
       const d = meta?.decoderConfig?.description;
       if (d) post({ t: "config", kind: "video", data: new Uint8Array(d as ArrayBuffer).slice() });
       const buf = new Uint8Array(chunk.byteLength); chunk.copyTo(buf);
-      post({ t: "chunk", kind: "video", key: chunk.type === "key", ptsUs: chunk.timestamp, data: buf }, [buf.buffer]);
+      post({ t: "chunk", kind: "video", key: chunk.type === "key", dtsMs: Math.round(chunk.timestamp / 1000), ctsMs: 0, data: buf }, [buf.buffer]);
     },
     error: (e) => post({ t: "error", msg: "video encoder: " + e.message }),
   });
@@ -83,7 +109,8 @@ function startEncoders() {
       const d = meta?.decoderConfig?.description;
       if (d) post({ t: "config", kind: "audio", data: new Uint8Array(d as ArrayBuffer).slice() });
       const buf = new Uint8Array(chunk.byteLength); chunk.copyTo(buf);
-      post({ t: "chunk", kind: "audio", key: true, ptsUs: chunk.timestamp, data: buf }, [buf.buffer]);
+      audioChunks++;
+      post({ t: "chunk", kind: "audio", key: true, dtsMs: Math.max(0, Math.round((chunk.timestamp - (audioBase ?? 0)) / 1000)), ctsMs: 0, data: buf }, [buf.buffer]);
     },
     error: (e) => post({ t: "error", msg: "audio encoder: " + e.message }),
   });
@@ -103,10 +130,19 @@ ctxW.onmessage = async (ev: MessageEvent<ToWorker>) => {
       if (m.stream) void pump(m.stream, (f) => { latest[m.id]?.close(); latest[m.id] = f; });
       break;
     case "audio":
-      if (m.stream) void pump(m.stream, (a) => { if (live && aenc && aenc.state === "configured") aenc.encode(a); a.close(); });
+      if (m.stream) void pump(m.stream, (a) => {
+        if (live && aenc && aenc.state === "configured") {
+          // Capture-clock timestamps are unrelated to the video clock (performance.now() - t0): rebase on first sample.
+          if (audioBase === null) audioBase = a.timestamp - (performance.now() - t0) * 1000;
+          const st = toStereo48k(a);
+          if (st) { try { aenc.encode(st); } catch (e) { post({ t: "error", msg: "audio encode: " + String(e) }); } if (st !== a) st.close(); }
+        }
+        a.close();
+      });
       break;
     case "scene": snap = m.snap; break;
-    case "start": startEncoders(); frameN = 0; dropped = 0; t0 = performance.now(); live = true; break;
+    case "start": startEncoders(); frameN = 0; dropped = 0; audioBase = null; audioChunks = 0; t0 = performance.now(); live = true;
+      post({ t: "started", wallStartMs: performance.timeOrigin + t0 }); break;
     case "stop":
       live = false;
       try { await venc?.flush(); await aenc?.flush(); } catch { /* ignore */ }

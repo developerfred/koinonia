@@ -13,7 +13,8 @@ export type ToWorker =
 
 export type FromWorker =
   | { t: "config"; kind: "video" | "audio"; data: Uint8Array }
-  | { t: "chunk"; kind: "video" | "audio"; key: boolean; ptsUs: number; data: Uint8Array }
-  | { t: "stats"; fps: number; dropped: number }
+  | { t: "chunk"; kind: "video" | "audio"; key: boolean; dtsMs: number; ctsMs: number; data: Uint8Array }
+  | { t: "started"; wallStartMs: number }
+  | { t: "stats"; fps: number; dropped: number; encQueue: number; aacEncoded: number }
   | { t: "snap"; reqId: number; blob: Blob | null }
   | { t: "error"; msg: string };
