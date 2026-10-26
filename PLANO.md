@@ -48,3 +48,33 @@ Gastar (o que sai para o LLM):
 5. Painel de dados.
 6. Agente de economia de tokens.
 7. Docs, CI, release open source.
+
+## Dores do mercado -> o que o Koinonia entrega
+| Dor | Solução |
+|---|---|
+| Achar momentos sem rever VODs | Clipper ao vivo (chat + áudio + transcrição) |
+| Clipe 9:16 com legenda | Pipeline de clipes verticais + publicação (Shorts, TikTok, Reels) |
+| Chat vivo e moderação sozinho | Moderador com aprovação humana + chat unificado |
+| Várias plataformas | Fan-out no daemon (Twitch, YouTube; Kick e TikTok Live depois) |
+| Setup difícil | Onboarding em minutos, direto no navegador |
+| Trabalho pós-live | Resumo, capítulos, título e miniatura sugeridos, relatório |
+| Ideias de interação | Agente sugere enquetes e desafios a partir do chat |
+| Custo imprevisível | Orçamento mensal e painel de gasto (agente de tokens) |
+
+## Princípios de UI/UX (sempre preservar)
+- Duas visualizações desde o início, alternáveis a qualquer momento com um atalho,
+  sem perder estado: **Foco** (uma coisa por vez, grande, calma, próximo passo
+  óbvio) e **Painel** (tudo visível, denso, para quem domina a ferramenta).
+- Divulgação progressiva, baixa carga cognitiva, uma ação primária por tela.
+- Estado persistente, desfazer em tudo, sem perda de progresso.
+- Lembretes gentis e opcionais (temporizadores visuais, pausas, checklists).
+- Movimento mínimo e opcional, nada piscando, respeita prefers-reduced-motion.
+- Contraste AA+, tipografia legível, densidade e cores ajustáveis, teclado primeiro.
+- Notificações agrupadas e silenciáveis; nunca interromper a live sem necessidade.
+
+## Novas fases
+8. Design system e as duas visualizações (Foco e Painel).
+9. Conectores de chat unificado (Twitch, YouTube).
+10. Pipeline de clipes verticais com legenda e publicação.
+11. Pós-live automático.
+12. Onboarding e sugestões de interação.
