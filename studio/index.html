@@ -1,29 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Koinonia Studio</title>
-<style>
- body{font:14px system-ui;margin:0;background:#111;color:#eee;display:grid;grid-template-columns:1fr 320px;height:100vh}
- main{padding:12px}canvas,video{max-width:100%;background:#000}
- aside{padding:12px;overflow:auto;border-left:1px solid #333}
- button{margin:2px}.warn{color:#fb4}pre{white-space:pre-wrap;font-size:12px}
-</style>
+<meta name="color-scheme" content="light dark" />
+<title>Koinonia Estúdio</title>
+<script>
+  /* Aplica preferências visuais antes da primeira pintura (evita troca de tema/tamanho no carregamento). */
+  try {
+    var p = JSON.parse(localStorage.getItem("koinonia.studio.prefs.v1") || "null") || {}, h = document.documentElement;
+    if (p.theme === "light" || p.theme === "dark") h.dataset.theme = p.theme;
+    if (p.contrast === "high") h.dataset.contrast = "high";
+    if (p.density) h.dataset.density = p.density;
+    if (typeof p.fontScale === "number") h.style.setProperty("--fs", String(p.fontScale));
+    h.dataset.view = p.view === "painel" ? "painel" : "foco";
+  } catch (e) {}
+</script>
 </head>
 <body>
-<main>
- <h3>Koinonia Studio</h3>
- <video id="preview" muted autoplay playsinline></video>
- <div>
-  <button id="cam">Camera+Mic</button>
-  <button id="scr">Share screen</button>
-  <button id="go">Start stream</button>
-  <button id="stop">Stop</button>
- </div>
- <p id="support" class="warn"></p>
-</main>
-<aside><b>Status</b><pre id="status"></pre></aside>
+<div id="app"></div>
+<noscript>O Koinonia Estúdio precisa de JavaScript para funcionar.</noscript>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

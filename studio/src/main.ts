@@ -1,28 +1,18 @@
+import "./ui/styles.css";
 import { Studio } from "./studio";
 import { buildTools } from "./tools/tools";
 import { registerAll } from "./tools/webmcp";
+import { mountApp } from "./ui/app";
 
-const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const studio = new Studio();
 const reg = registerAll(buildTools(studio));
+const app = mountApp(document.getElementById("app")!, studio);
 
-$("support").textContent = studio.supportMessage;
-const status = () => {
-  $("status").textContent = JSON.stringify({
-    webmcp: reg.native ? "native" : "polyfill", tools: reg.names.length, state: studio.streamState(),
-    scene: studio.scenes.current, chatCursor: studio.chat.cursor,
-  }, null, 1);
-};
-setInterval(status, 1000); status();
+// Os agentes (WebMCP) e o usuário compartilham o mesmo Studio; o tick sincroniza a UI com o que os agentes fizeram.
+setInterval(() => app.tick(), 1000);
+studio.log = (s) => app.notify("sistema", "warn", s);
+document.documentElement.dataset.webmcp = reg.native ? "native" : "polyfill";
 
-const preview = $<HTMLVideoElement>("preview");
-studio.log = (s) => { $("status").textContent += "\n" + s; };
-const guard = (f: () => Promise<unknown>) => () => f().catch((e) => ($("support").textContent = String(e)));
-$("cam").onclick = guard(async () => { preview.srcObject = await studio.enableCamera(); });
-$("scr").onclick = guard(async () => { await studio.enableScreen(); studio.scenes.switchScene("screen"); });
-$("go").onclick = guard(async () => { const r = await studio.startStream(); $("support").textContent = r.detail ?? r.state; });
-$("stop").onclick = guard(async () => { await studio.stopStream(); });
-
-// Dev hook until real Twitch/YouTube chat connectors exist (daemon will push chat in future).
+// Dev hook até existirem conectores reais de chat (o daemon enviará chat no futuro).
 (window as unknown as Record<string, unknown>).koinoniaPushChat = (user: string, text: string, platform = "twitch") =>
   studio.chat.push({ ts: Date.now(), platform, user, text });
