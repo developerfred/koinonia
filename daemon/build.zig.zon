@@ -1,0 +1,13 @@
+.{
+    .name = .koinonia_d,
+    .fingerprint = 0xfa1ddc4b6d63051b,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "PROTOCOL.md",
+    },
+}
