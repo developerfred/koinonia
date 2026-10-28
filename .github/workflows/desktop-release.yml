@@ -1,0 +1,81 @@
+# Builds the Koinonia desktop app for Linux, Windows and macOS (x86_64 + aarch64), all
+# cross-compiled from one Linux runner. Tag `desktop-v*` publishes a pre-release.
+name: desktop-release
+
+on:
+  push:
+    tags: ["desktop-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04   # every target is cross-compiled from Linux; no per-OS runner needed
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-linux,    asset: koinonia-linux-x86_64 }
+          - { target: aarch64-linux,   asset: koinonia-linux-aarch64 }
+          - { target: x86_64-windows,  asset: koinonia-windows-x86_64 }
+          - { target: aarch64-windows, asset: koinonia-windows-aarch64 }
+          - { target: x86_64-macos,    asset: koinonia-macos-x86_64 }
+          - { target: aarch64-macos,   asset: koinonia-macos-aarch64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: studio/package-lock.json }
+
+      - name: Build the studio (embedded into the binary)
+        working-directory: studio
+        run: npm install --no-audit --no-fund && npm run build
+
+      - uses: mlugg/setup-zig@v2
+        with: { version: 0.17.0 }
+
+      - name: Test (host)
+        working-directory: desktop
+        run: zig build test
+
+      - name: Build ${{ matrix.target }}
+        working-directory: desktop
+        run: zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe --prefix out
+
+      - name: Package
+        working-directory: desktop
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            (cd out/bin && zip -9 ../../dist/${{ matrix.asset }}.zip koinonia.exe)
+          else
+            tar -C out/bin -czf dist/${{ matrix.asset }}.tar.gz koinonia
+          fi
+          (cd dist && sha256sum * > ${{ matrix.asset }}.sha256)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: desktop/dist/*
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/* --repo "${{ github.repository }}" --generate-notes --prerelease --title "Koinonia desktop ${{ github.ref_name }} (alpha)" --notes-file .github/release-notes.md
+
+# Not done here (needs credentials / decisions): macOS codesign + notarization, Windows signing,
+# an .app bundle / installer. The unsigned macOS binary must be run from a terminal or
+# have its quarantine attribute removed (`xattr -d com.apple.quarantine koinonia`).
