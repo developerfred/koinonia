@@ -6,7 +6,7 @@ sidebar:
 ---
 
 :::caution[Built, not released]
-The desktop app exists in `desktop/` and has been built and run on macOS arm64. There are no download links yet: build it from source. Linux, Windows and Intel macOS builds cross-compile but have not been run.
+The desktop app exists in `desktop/` and has been built and run on macOS arm64. The first alpha download is not published yet (see the [Download](../download/) page); build it from source for now. Linux, Windows and Intel macOS builds cross-compile but have not been run.
 :::
 
 The desktop app is one native binary written in Zig. It runs the Koinonia daemon, serves the studio from files embedded in the binary, and opens the studio as an app window in a Chromium-family browser you already have installed, using a dedicated browser profile. Capture and encoding still happen in the browser, as described in the [architecture](../concepts/architecture/).

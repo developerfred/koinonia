@@ -238,3 +238,9 @@ html[data-view='foco'] .tool:nth-child(n+7) { display: none; }
 html[data-view='foco'] .tool-more { display: block; }
 .tool-more { display: none; margin-top: 1rem; }
 html[data-view='foco'] .tool-grid::after { content: none; }
+
+/* download call to action (header, always visible) */
+.dl-top { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2rem; padding: 0 0.85rem; border-radius: 999px; background: var(--tally-fill); color: var(--on-tally); border: 1px solid var(--tally-fill); font: 600 0.8rem/1 var(--font-body); text-decoration: none; transition: background-color 0.25s var(--ease-quart), color 0.25s var(--ease-quart); }
+.dl-top:hover { background: var(--bone); border-color: var(--bone); color: var(--ink); }
+.dl-top:focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
+@media (max-width: 34rem) { .dl-top { padding: 0; width: 2rem; justify-content: center; } .dl-top .dl-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .top .wrap { gap: 0.4rem; } }

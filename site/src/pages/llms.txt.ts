@@ -13,6 +13,7 @@ Notes for agents:
 - The whole documentation in one file: ${ORIGIN}/llms-full.txt
 - Landing summary: ${ORIGIN}/index.md
 - Source repository: ${REPO}
+- Desktop app downloads (alpha, unsigned; only macOS arm64 run by maintainers): ${ORIGIN}/docs/download/ . Releases are pre-releases tagged desktop-v*; the first alpha may not be published yet. Releases: ${REPO}/releases
 
 ## Docs
 

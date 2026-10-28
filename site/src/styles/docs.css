@@ -40,3 +40,22 @@ a:focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
 .table-scroll { overflow-x: auto; margin: 1rem 0; }
 .table-scroll:focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
 .table-scroll > table { margin: 0; display: table; }
+
+/* Download page */
+.dl { margin: 1.5rem 0; padding: 1.1rem 1.25rem; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--ink-2); }
+.dl-status { margin: 0 !important; font-size: 0.92rem; color: var(--sl-color-gray-2); }
+.dl-status.dl-none { color: var(--text); }
+.dl-pick { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.dl-pick[hidden] { display: none; }
+.dl-pick-label { margin: 0 !important; font-size: 0.95rem; }
+.dl-pick-actions { margin: 0.8rem 0 0 !important; display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.dl-pick-actions:empty { display: none; }
+.dl a.dl-btn { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1.25rem; border-radius: 999px; background: var(--tally-fill); color: var(--on-tally); border: 1px solid var(--tally-fill); font-weight: 600; font-size: 0.92rem; text-decoration: none; word-break: break-all; }
+.dl a.dl-btn:hover { background: var(--bone); border-color: var(--bone); color: var(--ink); }
+.dl a.dl-btn:focus-visible { outline: 2px solid var(--tally); outline-offset: 2px; }
+tr.dl-match > td { background: color-mix(in srgb, var(--tally) 10%, transparent); }
+tr.dl-match > td:first-child { box-shadow: inset 3px 0 0 var(--tally); }
+.dl-badge { display: inline-block; margin-left: 0.3rem; padding: 0.1rem 0.5rem; border: 1px solid var(--tally); border-radius: 999px; color: var(--tally); font: 600 0.62rem/1.4 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+a.dl-file { word-break: break-all; }
+.sidebar-content a[href$='/docs/download/'] { font-weight: 600; }
+@media (forced-colors: active) { tr.dl-match > td:first-child { border-inline-start: 3px solid Highlight; } }

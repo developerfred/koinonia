@@ -27,6 +27,7 @@ export function toTwin(d: Doc): string {
   const url = ORIGIN.replace(BASE, '') + pagePath(d.id);
   let body = (d.body ?? '')
     .replace(/<figure[\s\S]*?<\/figure>\s*/g, '')
+    .replace(/<!--dl-start-->[\s\S]*?<!--dl-end-->\s*/g, '')
     .replace(/^:::(\w+)(?:\[(.*?)\])?\s*$/gm, (_m, kind, title) => `> **${title ?? kind.toUpperCase()}**`)
     .replace(/^:::\s*$/gm, '')
     .replace(/\]\((?!https?:|#|mailto:|\/)([^)]+)\)/g, (_m, href) => `](${new URL(href, url).href})`)
@@ -43,6 +44,7 @@ export function landingTwin(): string {
 > Open-source live-streaming studio that runs in the browser, with a Zig daemon and WebMCP tools so agents can run the show. Twitch and YouTube, no OBS. Status: pre-alpha.
 
 Docs: ${ORIGIN}/docs/
+Download (alpha, unsigned): ${ORIGIN}/docs/download/
 Source: ${REPO}
 License: MIT
 
