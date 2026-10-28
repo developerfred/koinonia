@@ -8,10 +8,31 @@ const site_mod = @import("site.zig");
 
 const log = std.log.scoped(.httpd);
 
+/// Result of the codec probe page (see site.probe_html), filled in by `GET /__probe/result/...`.
+pub const Probe = struct {
+    done: std.atomic.Value(bool) = .init(false),
+    h264: std.atomic.Value(bool) = .init(false),
+    aac: std.atomic.Value(bool) = .init(false),
+};
+
+pub const ProbeResult = struct { h264: bool, aac: bool };
+
+/// Parse `/__probe/result/h264-1/aac-0`.
+pub fn parseProbeResult(path: []const u8) ?ProbeResult {
+    const prefix = "/__probe/result/h264-";
+    if (!std.mem.startsWith(u8, path, prefix)) return null;
+    const rest = path[prefix.len..];
+    if (rest.len != "1/aac-1".len) return null;
+    if ((rest[0] != '0' and rest[0] != '1') or rest[1] != '/' or !std.mem.eql(u8, rest[2..6], "aac-")) return null;
+    if (rest[6] != '0' and rest[6] != '1') return null;
+    return .{ .h264 = rest[0] == '1', .aac = rest[6] == '1' };
+}
+
 pub const Server = struct {
     io: Io,
     site: site_mod.Site,
     port: u16,
+    probe: ?*Probe = null,
 };
 
 pub const Request = struct {
@@ -113,6 +134,15 @@ pub fn serve(srv: *const Server, stream: net.Stream) void {
         writeSimple(w, 400, "Bad Request", "bad path\n") catch {};
         return;
     }
+    if (parseProbeResult(req.path)) |res| {
+        if (srv.probe) |pr| {
+            pr.h264.store(res.h264, .release);
+            pr.aac.store(res.aac, .release);
+            pr.done.store(true, .release);
+        }
+        writeSimple(w, 200, "OK", "ok\n") catch {};
+        return;
+    }
     const entry = srv.site.find(req.path) orelse {
         writeSimple(w, 404, "Not Found", "not found\n") catch {};
         return;
@@ -167,4 +197,12 @@ test "host allow-list" {
 test "path guard" {
     try std.testing.expect(pathSuspicious("/../etc/passwd"));
     try std.testing.expect(!pathSuspicious("/assets/a.js"));
+}
+
+test "probe result parsing" {
+    const r = parseProbeResult("/__probe/result/h264-1/aac-0").?;
+    try std.testing.expect(r.h264 and !r.aac);
+    try std.testing.expect(parseProbeResult("/__probe/result/h264-2/aac-0") == null);
+    try std.testing.expect(parseProbeResult("/__probe/result/h264-1/aac-01") == null);
+    try std.testing.expect(parseProbeResult("/index.html") == null);
 }

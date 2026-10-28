@@ -33,6 +33,8 @@ const usage =
     \\  --profile-dir DIR   browser profile directory (default: per-user Koinonia dir)
     \\  --port N            HTTP port for the studio (default: a free port)
     \\  --config FILE       daemon JSON config (destinations, clip dir), see daemon/PROTOCOL.md
+    \\  --skip-probe        do not check the browser's WebCodecs H.264/AAC encoders at startup
+    \\  --strict            exit with code 5 when the H.264 encoder is missing
     \\  --list-browsers     show the browsers that were found, then exit
     \\  --check-config      validate the daemon configuration, then exit
     \\  --version, --help
@@ -148,6 +150,8 @@ pub fn main(init: std.process.Init) !void {
     var config_path: ?[]const u8 = env.get("KOINONIA_CONFIG");
     var check_only = false;
     var list_only = false;
+    var skip_probe = false;
+    var strict = false;
 
     var args = try init.minimal.args.iterateAllocator(arena);
     _ = args.next();
@@ -162,6 +166,10 @@ pub fn main(init: std.process.Init) !void {
             no_browser = true;
         } else if (std.mem.eql(u8, a, "--check-config")) {
             check_only = true;
+        } else if (std.mem.eql(u8, a, "--skip-probe")) {
+            skip_probe = true;
+        } else if (std.mem.eql(u8, a, "--strict")) {
+            strict = true;
         } else if (std.mem.eql(u8, a, "--list-browsers")) {
             list_only = true;
         } else if (std.mem.eql(u8, a, "--browser")) {
@@ -256,7 +264,8 @@ pub fn main(init: std.process.Init) !void {
     } else {
         for (assets.files) |f| try raw.append(arena, .{ .path = f.path, .mime = f.mime, .data = f.data });
     }
-    if (raw.items.len == 0) try raw.append(arena, .{ .path = "/index.html", .mime = "text/html; charset=utf-8", .data = site_mod.placeholder_html });
+    try raw.append(arena, .{ .path = "/__probe.html", .mime = "text/html; charset=utf-8", .data = site_mod.probe_html });
+    if (raw.items.len == 1) try raw.append(arena, .{ .path = "/index.html", .mime = "text/html; charset=utf-8", .data = site_mod.placeholder_html });
     const site: site_mod.Site = .{ .entries = try site_mod.prepare(arena, raw.items, ws_url, origin) };
 
     // ---- daemon state ----
@@ -269,7 +278,8 @@ pub fn main(init: std.process.Init) !void {
         }
     }
     var app: session.App = .{ .gpa = gpa, .io = io, .cfg = cfg, .tls = &tls_ctx };
-    const http_srv: httpd.Server = .{ .io = io, .site = site, .port = http_l.port };
+    var probe: httpd.Probe = .{};
+    const http_srv: httpd.Server = .{ .io = io, .site = site, .port = http_l.port, .probe = &probe };
 
     var group: Io.Group = .init;
     defer group.cancel(io);
@@ -302,7 +312,24 @@ pub fn main(init: std.process.Init) !void {
         std.process.exit(1);
     };
     const argv = try browser.buildArgv(arena, found.path, app_url, prof, &.{});
-    out(io, "  browser: {s} ({s})\n  profile: {s}\n", .{ browser.kindName(found.kind), found.path, prof });
+    out(io, "  browser: {s} ({s})\n  profile: {s}\n", .{ if (browser_override != null) "custom browser" else browser.kindName(found.kind), found.path, prof });
+
+    if (!skip_probe) {
+        const label = if (browser_override != null) "custom browser" else browser.kindName(found.kind);
+        const verdict = probeCodecs(io, arena, found.path, prof, origin, &probe);
+        switch (verdict) {
+            .ok => out(io, "  codecs:  H.264 and AAC encoding available in {s}\n", .{label}),
+            .no_h264 => {
+                err(io, "\nWARNING: {s} ({s}) cannot encode H.264 with WebCodecs.\n" ++
+                    "The studio needs it to stream to Twitch/YouTube. Use Google Chrome or Microsoft Edge\n" ++
+                    "(they include the H.264/AAC encoders), or pick another browser with --browser.\n" ++
+                    "Many Linux Chromium packages are built without these codecs. See `koinonia --list-browsers`.\n\n", .{ label, found.path });
+                if (strict) std.process.exit(5);
+            },
+            .no_aac => err(io, "\nWARNING: {s} ({s}) can encode H.264 but not AAC with WebCodecs; streams would have no usable audio track.\n\n", .{ label, found.path }),
+            .inconclusive => err(io, "  codecs:  check inconclusive for {s} (headless probe did not report in time); continuing\n", .{label}),
+        }
+    }
 
     var child = std.process.spawn(io, .{
         .argv = argv,
@@ -328,6 +355,36 @@ pub fn main(init: std.process.Init) !void {
     out(io, "browser closed, shutting down\n", .{});
     // `defer group.cancel(io)` stops both servers; in-flight ingest sessions are torn down by
     // their own task cancellation (RTMP connections are closed by the session shutdown path).
+}
+
+const Verdict = enum { ok, no_h264, no_aac, inconclusive };
+
+/// Start the browser headless on the probe page and wait (max ~15 s) for it to report whether
+/// WebCodecs can encode H.264 and AAC. Uses a separate profile directory so it never collides
+/// with the app window.
+fn probeCodecs(io: Io, arena: std.mem.Allocator, exe: []const u8, profile: []const u8, origin: []const u8, probe: *httpd.Probe) Verdict {
+    const pprof = std.fmt.allocPrint(arena, "{s}-probe", .{profile}) catch return .inconclusive;
+    Io.Dir.cwd().createDirPath(io, pprof) catch return .inconclusive;
+    const argv = [_][]const u8{
+        exe,
+        "--headless=new",
+        std.fmt.allocPrint(arena, "--user-data-dir={s}", .{pprof}) catch return .inconclusive,
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-extensions",
+        "--mute-audio",
+        std.fmt.allocPrint(arena, "{s}/__probe.html", .{origin}) catch return .inconclusive,
+    };
+    var child = std.process.spawn(io, .{ .argv = &argv, .stdin = .ignore, .stdout = .ignore, .stderr = .ignore }) catch return .inconclusive;
+    var waited: u32 = 0;
+    while (!probe.done.load(.acquire) and waited < 150) : (waited += 1) {
+        io.sleep(.fromMilliseconds(100), .awake) catch break;
+    }
+    child.kill(io);
+    if (!probe.done.load(.acquire)) return .inconclusive;
+    if (!probe.h264.load(.acquire)) return .no_h264;
+    if (!probe.aac.load(.acquire)) return .no_aac;
+    return .ok;
 }
 
 fn usageError(io: Io, msg: []const u8) noreturn {

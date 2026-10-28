@@ -39,6 +39,17 @@ pub const placeholder_html =
     \\or run <code>koinonia --studio-dir path/to/studio/dist</code>.</p>
 ;
 
+/// Page loaded by the headless codec probe: reports whether this browser can ENCODE H.264 and AAC
+/// with WebCodecs, using the same configs the studio needs (baseline 3.1, AAC-LC 48 kHz stereo).
+pub const probe_html =
+    \\<!doctype html><meta charset="utf-8"><title>probe</title><script>
+    \\(async()=>{let h=0,a=0;
+    \\try{const r=await VideoEncoder.isConfigSupported({codec:'avc1.42E01F',width:1280,height:720,bitrate:2500000,framerate:30,avc:{format:'avc'}});h=r.supported?1:0}catch(e){}
+    \\try{const r=await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:48000,numberOfChannels:2,bitrate:128000});a=r.supported?1:0}catch(e){}
+    \\try{await fetch('/__probe/result/h264-'+h+'/aac-'+a)}catch(e){}})();
+    \\</script>
+;
+
 pub fn mimeFor(path: []const u8) []const u8 {
     const ext = std.fs.path.extension(path);
     const table = [_][2][]const u8{

@@ -33,9 +33,18 @@ Keys are never printed.
 | `--studio-dir DIR` | serve a directory instead of the embedded studio |
 | `--profile-dir DIR` | browser profile (default per user: `~/.local/share/koinonia/browser-profile`, `~/Library/Application Support/Koinonia/browser-profile`, `%LOCALAPPDATA%\Koinonia\browser-profile`) |
 | `--port N` | fixed studio HTTP port |
+| `--skip-probe` / `--strict` | skip the startup codec check / exit 5 if H.264 encoding is missing |
 | `--list-browsers`, `--check-config`, `--version` | diagnostics |
 
-Exit codes: 0 normal, 1 error, 2 usage, 3 no browser found, 4 browser exited immediately.
+Exit codes: 0 normal, 1 error, 2 usage, 3 no browser found, 4 browser exited immediately,
+5 H.264 encoder missing (only with `--strict`).
+
+**Codec check.** Before opening the window, the app starts the same browser headless (separate
+`...-probe` profile) on a tiny page that calls `VideoEncoder.isConfigSupported` (H.264 baseline 3.1)
+and `AudioEncoder.isConfigSupported` (AAC-LC 48 kHz stereo) and reports back to the local server.
+It prints either `codecs: H.264 and AAC encoding available in <browser>` or a warning naming the
+browser and path. A headless probe can differ from the windowed browser in hardware encoder
+availability, so a missing result warns rather than blocks unless `--strict` is given.
 
 Browser order: Google Chrome, Microsoft Edge, Brave, Chromium. Chrome and Edge include H.264/AAC
 encoders; some Linux Chromium builds do not. WebMCP (`navigator.modelContext`) needs a Chrome build

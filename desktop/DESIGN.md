@@ -101,6 +101,11 @@ koinonia (one process)
   unblocks the same path. Verified on macOS with real Chrome: SIGINT left no browser or koinonia
   process behind. If the browser exits within 3 s (typically: it handed the window to an existing
   instance) the app says so and exits with code 4.
+- **Codec probe**: before the real window the chosen browser is run `--headless=new` on `/__probe.html`,
+  which checks `VideoEncoder`/`AudioEncoder.isConfigSupported` for H.264 baseline and AAC-LC and reports
+  to `/__probe/result/h264-X/aac-Y` (verified with Chrome on macOS arm64: both available; the inconclusive
+  path was exercised with a fake browser; the negative path is unit-tested at the parser level only).
+  Missing H.264 prints a warning naming the browser (exit 5 with `--strict`).
 - **No browser**: exit code 3 and an install guide per OS; `--no-browser` still serves and prints the URL.
 - **Windows console**: the same binary is a console app; a release build can add `-Dwindows-gui`
   later (subsystem) once logging goes to a file. Not done yet.
