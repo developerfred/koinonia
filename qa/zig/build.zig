@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const koinonia = b.createModule(.{ .root_source_file = b.path(daemon_root), .target = target, .optimize = optimize });
     // Comma-separated ids of documented daemon bugs whose fuzz checks are skipped (they would abort the whole test binary).
     // Mirror of qa/known-gaps.json "zig.*" entries. Run with -Dknown-gaps=none to see them crash.
-    const known = b.option([]const u8, "known-gaps", "known gaps to skip, comma separated, or 'none'") orelse "amf0-commandName-u16-overflow";
+    const known = b.option([]const u8, "known-gaps", "known gaps to skip, comma separated, or 'none'") orelse "none";
     const opts = b.addOptions();
     opts.addOption([]const u8, "known_gaps", known);
     opts.addOption(u32, "fuzz_iters", iters);

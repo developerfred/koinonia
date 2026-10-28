@@ -46,7 +46,7 @@ pub const ParseError = error{ Truncated, UnknownKind, BadPayload };
 /// Parse a frame; `payload` aliases `bytes`.
 pub fn parse(bytes: []const u8) ParseError!Frame {
     if (bytes.len < header_len) return error.Truncated;
-    const kind: Kind = @enumFromInt(bytes[0]);
+    const kind: Kind = @fromBackingInt(@intCast(bytes[0]));
     switch (kind) {
         .start, .stop, .clip, .video_config, .audio_config, .video_chunk, .audio_chunk => {},
         else => return error.UnknownKind,
@@ -69,7 +69,7 @@ pub fn parse(bytes: []const u8) ParseError!Frame {
 
 pub fn encodeHeader(f: Frame) [header_len]u8 {
     var h: [header_len]u8 = undefined;
-    h[0] = @intFromEnum(f.kind);
+    h[0] = @backingInt(f.kind);
     h[1] = f.flags;
     std.mem.writeInt(u32, h[2..6], f.dts_ms, .big);
     std.mem.writeInt(i32, h[6..10], f.cts_offset_ms, .big);

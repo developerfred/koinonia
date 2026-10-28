@@ -152,7 +152,7 @@ pub fn writeBusy(w: *Writer) Writer.Error!void {
 
 /// Write one unfragmented, unmasked server frame. Does not flush.
 pub fn writeFrame(w: *Writer, op: Opcode, payload: []const u8) Writer.Error!void {
-    try w.writeByte(0x80 | @as(u8, @intFromEnum(op)));
+    try w.writeByte(0x80 | @as(u8, @backingInt(op)));
     if (payload.len < 126) {
         try w.writeByte(@intCast(payload.len));
     } else if (payload.len <= 0xFFFF) {
@@ -197,13 +197,13 @@ pub const Conn = struct {
             const b1 = try c.r.takeByte();
             const fin = b0 & 0x80 != 0;
             if (b0 & 0x70 != 0) return error.ProtocolError; // RSV bits, no extensions
-            const op: Opcode = @enumFromInt(@as(u4, @truncate(b0)));
+            const op: Opcode = @fromBackingInt(@intCast(@as(u4, @truncate(b0))));
             if (b1 & 0x80 == 0) return error.ProtocolError; // unmasked client frame
             var len: u64 = b1 & 0x7F;
             if (len == 126) len = try c.r.takeInt(u16, .big) else if (len == 127) len = try c.r.takeInt(u64, .big);
             var mask: [4]u8 = undefined;
             try c.r.readSliceAll(&mask);
-            const is_control = @intFromEnum(op) >= 8;
+            const is_control = @backingInt(op) >= 8;
             if (is_control and (len > 125 or !fin)) return error.ProtocolError;
             if (len + c.buf.items.len > c.max_message) return error.MessageTooLarge;
             const n: usize = @intCast(len);

@@ -76,8 +76,8 @@ pub fn findStringProp(payload: []const u8, key: []const u8) ?[]const u8 {
         if (!std.mem.eql(u8, payload[i + 2 ..][0..key.len], key)) continue;
         const m = i + 2 + key.len;
         if (payload[m] != Marker.string) continue;
-        const l = std.mem.readInt(u16, payload[m + 1 ..][0..2], .big);
-        if (m + 3 + l > payload.len) return null;
+        const l: usize = std.mem.readInt(u16, payload[m + 1 ..][0..2], .big);
+        if (l > payload.len - (m + 3)) return null;
         return payload[m + 3 ..][0..l];
     }
     return null;
@@ -86,8 +86,8 @@ pub fn findStringProp(payload: []const u8, key: []const u8) ?[]const u8 {
 /// Read the leading command name (a string) from an AMF0 command payload.
 pub fn commandName(payload: []const u8) ?[]const u8 {
     if (payload.len < 3 or payload[0] != Marker.string) return null;
-    const l = std.mem.readInt(u16, payload[1..3], .big);
-    if (3 + l > payload.len) return null;
+    const l: usize = std.mem.readInt(u16, payload[1..3], .big);
+    if (l > payload.len - 3) return null;
     return payload[3..][0..l];
 }
 
@@ -114,4 +114,23 @@ test "findStringProp reads onStatus code" {
     try std.testing.expectEqualStrings("onStatus", commandName(out).?);
     try std.testing.expectEqualStrings("NetStream.Publish.Start", findStringProp(out, "code").?);
     try std.testing.expect(findStringProp(out, "nope") == null);
+}
+
+test "commandName rejects lengths that would overflow u16 arithmetic" {
+    // Regression (fuzz reproducer): name length 0xFFFF used to compute `3 + l` in u16 and panic.
+    try std.testing.expect(commandName(&.{ Marker.string, 0xFF, 0xFF }) == null);
+    try std.testing.expect(commandName(&.{ Marker.string, 0xFF, 0xFD, 'a' }) == null);
+    try std.testing.expect(commandName(&.{ Marker.string, 0xFF, 0xFC }) == null);
+    var big: [3 + 65535]u8 = @splat('x');
+    big[0] = Marker.string;
+    std.mem.writeInt(u16, big[1..3], 65535, .big);
+    try std.testing.expectEqual(@as(usize, 65535), commandName(&big).?.len);
+    try std.testing.expect(commandName(big[0 .. big.len - 1]) == null);
+    try std.testing.expect(commandName(&.{}) == null);
+}
+
+test "findStringProp is bounds-safe on truncated and huge lengths" {
+    const p = [_]u8{ 0, 4, 'c', 'o', 'd', 'e', Marker.string, 0xFF, 0xFF, 'x' };
+    try std.testing.expect(findStringProp(&p, "code") == null);
+    try std.testing.expect(findStringProp(p[0..9], "code") == null);
 }

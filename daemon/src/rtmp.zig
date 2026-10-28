@@ -7,6 +7,7 @@ const amf0 = @import("amf0.zig");
 const flv = @import("flv.zig");
 const Reader = std.Io.Reader;
 const Writer = std.Io.Writer;
+const Io = std.Io;
 
 pub const MsgType = struct {
     pub const set_chunk_size: u8 = 1;
@@ -265,6 +266,11 @@ pub const ChunkReader = struct {
                     cr.chunk_size = std.mem.readInt(u32, s.buf.items[0..4], .big) & 0x7FFFFFFF;
                     if (cr.chunk_size == 0) return error.ProtocolError;
                 }
+                if (s.mtype == MsgType.abort and s.len >= 4) {
+                    // Abort Message: discard the partially received message on that chunk stream.
+                    const target = std.mem.readInt(u32, s.buf.items[0..4], .big);
+                    if (target < cr.slots.len and target != csid) cr.slots[target].buf.clearRetainingCapacity();
+                }
                 // `payload` aliases the slot buffer, so it is cleared on the next call.
                 cr.pending_clear = csid;
                 return msg;
@@ -293,6 +299,10 @@ pub const Publisher = struct {
     /// Window ack accounting.
     peer_window: u32 = 0,
     last_ack: u64 = 0,
+    /// When set (streaming phase with a concurrent control reader), every write to `w` is
+    /// serialised through `wlock`. Left null during the single-threaded publish handshake.
+    io: ?Io = null,
+    wlock: Io.Mutex = .init,
 
     pub fn init(gpa: std.mem.Allocator, r: *Reader, w: *Writer) Publisher {
         return .{ .r = r, .w = w, .cw = ChunkWriter.init(w), .cr = ChunkReader.init(gpa) };
@@ -417,12 +427,34 @@ pub const Publisher = struct {
         }
     }
 
-    /// Read one message and handle protocol control messages (window ack size, ping).
+    fn lockW(p: *Publisher) void {
+        if (p.io) |io| p.wlock.lockUncancelable(io);
+    }
+
+    fn unlockW(p: *Publisher) void {
+        if (p.io) |io| p.wlock.unlock(io);
+    }
+
+    /// Send one message and flush, serialised against the control reader.
+    fn emit(p: *Publisher, csid: u32, mtype: u8, sid: u32, ts: u32, head: []const u8, data: []const u8) Writer.Error!void {
+        p.lockW();
+        defer p.unlockW();
+        try p.cw.send(csid, mtype, sid, ts, head, data);
+        try p.w.flush();
+    }
+
+    /// Read one message and handle protocol control messages: window ack size, set peer
+    /// bandwidth, ping request (user control) and periodic acknowledgements. Set Chunk Size and
+    /// Abort are applied by the chunk reader itself.
     fn nextMessage(p: *Publisher) PublishError!Message {
         const m = try p.cr.readMessage(p.r);
         switch (m.mtype) {
             MsgType.window_ack_size => if (m.payload.len >= 4) {
                 p.peer_window = std.mem.readInt(u32, m.payload[0..4], .big);
+            },
+            MsgType.set_peer_bandwidth => if (m.payload.len >= 4) {
+                // Peer asks us to limit output to this size; answer with a window ack size.
+                try p.emit(Csid.control, MsgType.window_ack_size, 0, 0, m.payload[0..4], &.{});
             },
             MsgType.user_control => {
                 // PingRequest (6) -> PingResponse (7)
@@ -430,26 +462,39 @@ pub const Publisher = struct {
                     var b: [6]u8 = undefined;
                     std.mem.writeInt(u16, b[0..2], 7, .big);
                     @memcpy(b[2..6], m.payload[2..6]);
-                    try p.cw.send(Csid.control, MsgType.user_control, 0, 0, &b, &.{});
-                    try p.w.flush();
+                    try p.emit(Csid.control, MsgType.user_control, 0, 0, &b, &.{});
                 }
             },
             else => {},
         }
+        try p.maybeAck();
         return m;
     }
 
-    /// Drain any control traffic already readable and ack if the peer window is exceeded.
-    /// Call occasionally (only when a non-blocking read is possible) -- currently unused by the
-    /// daemon; see PROTOCOL notes (stubbed).
+    /// Streaming-phase control reader: consume everything the server sends (answering control
+    /// messages and acknowledging received bytes) until the connection fails or is closed.
+    /// Always returns an error (`EndOfStream` on a clean close). Run it concurrently with the
+    /// media pump after `publish`; call `enableLocking` first.
+    pub fn serviceControl(p: *Publisher) PublishError {
+        while (true) {
+            _ = p.nextMessage() catch |e| return e;
+        }
+    }
+
+    /// Serialise all further writes (needed once `serviceControl` runs on another task).
+    pub fn enableLocking(p: *Publisher, io: Io) void {
+        p.io = io;
+    }
+
+    /// Send a window acknowledgement if at least half the peer's window has been received since
+    /// the last one. Called after every message read in `nextMessage`.
     pub fn maybeAck(p: *Publisher) Writer.Error!void {
         if (p.peer_window == 0) return;
         if (p.cr.bytes_in - p.last_ack < p.peer_window / 2) return;
         var b: [4]u8 = undefined;
         std.mem.writeInt(u32, &b, @truncate(p.cr.bytes_in), .big);
-        try p.cw.send(Csid.control, MsgType.ack, 0, 0, &b, &.{});
-        try p.w.flush();
         p.last_ack = p.cr.bytes_in;
+        try p.emit(Csid.control, MsgType.ack, 0, 0, &b, &.{});
     }
 
     pub fn sendMetadata(p: *Publisher, meta: flv.Meta) Writer.Error!void {
@@ -457,58 +502,63 @@ pub const Publisher = struct {
         var bw: Writer = .fixed(&buf);
         try amf0.writeString(&bw, "@setDataFrame");
         try flv.writeMetadataBody(&bw, meta);
-        try p.cw.send(Csid.data, MsgType.data_amf0, p.stream_id, 0, bw.buffered(), &.{});
-        try p.w.flush();
+        try p.emit(Csid.data, MsgType.data_amf0, p.stream_id, 0, bw.buffered(), &.{});
     }
 
     pub fn sendVideoConfig(p: *Publisher, ts: u32, avcc: []const u8) Writer.Error!void {
         const h = flv.videoHeader(true, .sequence_header, 0);
-        try p.cw.send(Csid.video, MsgType.video, p.stream_id, ts, &h, avcc);
-        try p.w.flush();
+        try p.emit(Csid.video, MsgType.video, p.stream_id, ts, &h, avcc);
     }
 
     pub fn sendAudioConfig(p: *Publisher, ts: u32, asc: []const u8) Writer.Error!void {
         const h = flv.audioHeader(.sequence_header);
-        try p.cw.send(Csid.audio, MsgType.audio, p.stream_id, ts, &h, asc);
-        try p.w.flush();
+        try p.emit(Csid.audio, MsgType.audio, p.stream_id, ts, &h, asc);
     }
 
     pub fn sendVideo(p: *Publisher, ts: u32, keyframe: bool, cts: i32, avcc_nalus: []const u8) Writer.Error!void {
         const h = flv.videoHeader(keyframe, .nalu, cts);
-        try p.cw.send(Csid.video, MsgType.video, p.stream_id, ts, &h, avcc_nalus);
-        try p.w.flush();
+        try p.emit(Csid.video, MsgType.video, p.stream_id, ts, &h, avcc_nalus);
     }
 
     pub fn sendAudio(p: *Publisher, ts: u32, raw_aac: []const u8) Writer.Error!void {
         const h = flv.audioHeader(.raw);
-        try p.cw.send(Csid.audio, MsgType.audio, p.stream_id, ts, &h, raw_aac);
-        try p.w.flush();
+        try p.emit(Csid.audio, MsgType.audio, p.stream_id, ts, &h, raw_aac);
     }
 
     pub fn sendEndOfStream(p: *Publisher, ts: u32) Writer.Error!void {
         const h = flv.videoHeader(false, .end_of_sequence, 0);
-        try p.cw.send(Csid.video, MsgType.video, p.stream_id, ts, &h, &.{});
-        try p.w.flush();
+        try p.emit(Csid.video, MsgType.video, p.stream_id, ts, &h, &.{});
     }
 };
 
+/// Offset just past the leading command-name string, or null if the payload is not one.
+fn afterCommandName(payload: []const u8) ?usize {
+    const name = amf0.commandName(payload) orelse return null;
+    return 3 + name.len;
+}
+
+fn readNumberAt(payload: []const u8, off: usize) ?f64 {
+    if (off > payload.len or payload.len - off < 9) return null;
+    if (payload[off] != amf0.Marker.number) return null;
+    return @bitCast(std.mem.readInt(u64, payload[off + 1 ..][0..8], .big));
+}
+
 /// Transaction id (number following the command name), if present.
 fn commandTxn(payload: []const u8) ?f64 {
-    const l = std.mem.readInt(u16, payload[1..3], .big);
-    const off = 3 + @as(usize, l);
-    if (payload.len < off + 9 or payload[off] != amf0.Marker.number) return null;
-    return @bitCast(std.mem.readInt(u64, payload[off + 1 ..][0..8], .big));
+    const off = afterCommandName(payload) orelse return null;
+    return readNumberAt(payload, off);
 }
 
 /// `_result`, txn, null, streamId
 fn parseCreateStreamResult(payload: []const u8) ?u32 {
-    const l = std.mem.readInt(u16, payload[1..3], .big);
-    var off = 3 + @as(usize, l) + 9;
-    if (payload.len < off + 1 or payload[off] != amf0.Marker.null_) return null;
+    var off = afterCommandName(payload) orelse return null;
+    _ = readNumberAt(payload, off) orelse return null;
+    off += 9;
+    if (off >= payload.len or payload[off] != amf0.Marker.null_) return null;
     off += 1;
-    if (payload.len < off + 9 or payload[off] != amf0.Marker.number) return null;
-    const v: f64 = @bitCast(std.mem.readInt(u64, payload[off + 1 ..][0..8], .big));
-    if (v < 0 or v > 1e9) return null;
+    const v = readNumberAt(payload, off) orelse return null;
+    // Written so NaN is rejected too (every comparison with NaN is false).
+    if (!(v >= 0 and v <= 1e9)) return null;
     return @intFromFloat(v);
 }
 
@@ -548,7 +598,7 @@ test "chunk writer: fmt0 header bytes and payload" {
         0, 0, 0x10, // ts
         0, 0, 4, // len
         8, // type
-        1, 0, 0, 0, // stream id LE
+        1,    0, 0, 0, // stream id LE
         0xAF, 1, 2, 3,
     };
     try testing.expectEqualSlices(u8, &expect, w.buffered());
@@ -720,4 +770,142 @@ test "publisher: bad handshake" {
     var p = Publisher.init(testing.allocator, &r, &cw);
     defer p.deinit();
     try testing.expectError(error.BadHandshake, p.handshake(&rand));
+}
+
+test "server-controlled AMF parsing never reads out of bounds" {
+    // Regression: commandName / commandTxn / parseCreateStreamResult indexed without length checks.
+    const bad = [_][]const u8{
+        &.{},
+        &.{amf0.Marker.string},
+        &.{ amf0.Marker.string, 0xFF, 0xFF },
+        &.{ amf0.Marker.string, 0xFF, 0xFD, 'a' },
+        &.{ amf0.Marker.string, 0, 1, '_' },
+        &.{ amf0.Marker.string, 0, 1, '_', amf0.Marker.number, 0, 0, 0 },
+    };
+    for (bad) |b| {
+        try testing.expect(commandTxn(b) == null);
+        try testing.expect(parseCreateStreamResult(b) == null);
+    }
+    // Valid prefix, truncated at every length.
+    var buf: [64]u8 = undefined;
+    var w: Writer = .fixed(&buf);
+    try amf0.writeString(&w, "_result");
+    try amf0.writeNumber(&w, 4);
+    try amf0.writeNull(&w);
+    try amf0.writeNumber(&w, 1);
+    const full = w.buffered();
+    try testing.expectEqual(@as(?u32, 1), parseCreateStreamResult(full));
+    for (0..full.len) |n| try testing.expect(parseCreateStreamResult(full[0..n]) == null);
+    // NaN / negative / huge stream ids are rejected.
+    for ([_]f64{ std.math.nan(f64), -1, 1e12, std.math.inf(f64) }) |v| {
+        var w2: Writer = .fixed(&buf);
+        try amf0.writeString(&w2, "_result");
+        try amf0.writeNumber(&w2, 4);
+        try amf0.writeNull(&w2);
+        try amf0.writeNumber(&w2, v);
+        try testing.expect(parseCreateStreamResult(w2.buffered()) == null);
+    }
+}
+
+test "waitResult survives hostile command name lengths" {
+    var sbuf: [4096]u8 = undefined;
+    var sw: Writer = .fixed(&sbuf);
+    var scw = ChunkWriter.init(&sw);
+    try scw.send(3, MsgType.command_amf0, 0, 0, &.{ amf0.Marker.string, 0xFF, 0xFF, 'x' }, &.{});
+    var cbuf: [64]u8 = undefined;
+    var cw: Writer = .fixed(&cbuf);
+    var r: Reader = .fixed(sw.buffered());
+    var p = Publisher.init(testing.allocator, &r, &cw);
+    defer p.deinit();
+    try testing.expectError(error.EndOfStream, p.waitResult(1, false));
+}
+
+test "streaming: window ack size, ping and periodic acknowledgements" {
+    var sbuf: [4096]u8 = undefined;
+    var sw: Writer = .fixed(&sbuf);
+    var scw = ChunkWriter.init(&sw);
+    try scw.send(2, MsgType.window_ack_size, 0, 0, &.{ 0, 0, 0, 100 }, &.{}); // window = 100
+    try scw.send(2, MsgType.user_control, 0, 0, &.{ 0, 6, 0xDE, 0xAD, 0xBE, 0xEF }, &.{}); // ping req
+    try scw.send(2, MsgType.set_peer_bandwidth, 0, 0, &.{ 0, 0x26, 0x25, 0xA0, 2 }, &.{});
+    try scw.send(2, MsgType.set_chunk_size, 0, 0, &.{ 0, 0, 0x10, 0 }, &.{});
+    const incoming = sw.buffered().len;
+
+    var cbuf: [1024]u8 = undefined;
+    var cw: Writer = .fixed(&cbuf);
+    var r: Reader = .fixed(sw.buffered());
+    var p = Publisher.init(testing.allocator, &r, &cw);
+    defer p.deinit();
+    try testing.expectEqual(error.EndOfStream, p.serviceControl());
+    try testing.expectEqual(@as(u32, 100), p.peer_window);
+    try testing.expectEqual(@as(u32, 4096), p.cr.chunk_size);
+    try testing.expectEqual(@as(u64, incoming), p.cr.bytes_in);
+
+    // Parse what we answered.
+    var rr: Reader = .fixed(cw.buffered());
+    var cr = ChunkReader.init(testing.allocator);
+    defer cr.deinit();
+    var saw_pong = false;
+    var saw_win = false;
+    var acks: usize = 0;
+    var last_ack: u32 = 0;
+    while (cr.readMessage(&rr)) |m| {
+        switch (m.mtype) {
+            MsgType.user_control => {
+                saw_pong = std.mem.eql(u8, m.payload, &.{ 0, 7, 0xDE, 0xAD, 0xBE, 0xEF });
+            },
+            MsgType.window_ack_size => {
+                saw_win = std.mem.eql(u8, m.payload, &.{ 0, 0x26, 0x25, 0xA0 });
+            },
+            MsgType.ack => {
+                acks += 1;
+                const v = std.mem.readInt(u32, m.payload[0..4], .big);
+                try testing.expect(v > last_ack);
+                last_ack = v;
+            },
+            else => return error.TestUnexpectedResult,
+        }
+    } else |e| try testing.expectEqual(error.EndOfStream, e);
+    try testing.expect(saw_pong);
+    try testing.expect(saw_win);
+    try testing.expect(acks >= 1);
+    // Never ack more than we received, and the last ack is within half a window of the total.
+    try testing.expect(last_ack <= incoming);
+    try testing.expect(p.cr.bytes_in - p.last_ack < 50 + 12 + 5);
+}
+
+test "maybeAck only fires after half the window and with no window set" {
+    var cbuf: [64]u8 = undefined;
+    var cw: Writer = .fixed(&cbuf);
+    var r: Reader = .fixed(&.{});
+    var p = Publisher.init(testing.allocator, &r, &cw);
+    defer p.deinit();
+    p.cr.bytes_in = 1000;
+    try p.maybeAck();
+    try testing.expectEqual(@as(usize, 0), cw.buffered().len);
+    p.peer_window = 5000;
+    p.cr.bytes_in = 2499;
+    try p.maybeAck();
+    try testing.expectEqual(@as(usize, 0), cw.buffered().len);
+    p.cr.bytes_in = 2500;
+    try p.maybeAck();
+    try testing.expect(cw.buffered().len > 0);
+    try testing.expectEqual(@as(u64, 2500), p.last_ack);
+}
+
+test "abort message discards a partial message on its chunk stream" {
+    var sbuf: [1024]u8 = undefined;
+    var sw: Writer = .fixed(&sbuf);
+    // 200-byte message on csid 6 (chunk size 128): only the first chunk, then abort csid 6.
+    const first = [_]u8{ 0x06, 0, 0, 0, 0, 0, 200, MsgType.audio, 1, 0, 0, 0 } ++ @as([128]u8, @splat(7));
+    try sw.writeAll(&first);
+    var scw = ChunkWriter.init(&sw);
+    try scw.send(2, MsgType.abort, 0, 0, &.{ 0, 0, 0, 6 }, &.{});
+    try scw.send(6, MsgType.audio, 1, 5, &.{1}, &.{});
+    var r: Reader = .fixed(sw.buffered());
+    var cr = ChunkReader.init(testing.allocator);
+    defer cr.deinit();
+    try testing.expectEqual(MsgType.abort, (try cr.readMessage(&r)).mtype);
+    const m = try cr.readMessage(&r);
+    try testing.expectEqual(MsgType.audio, m.mtype);
+    try testing.expectEqual(@as(usize, 1), m.payload.len);
 }

@@ -319,4 +319,3 @@ pub fn serve(app: *App, stream: net.Stream) void {
         }
     }
 }
-

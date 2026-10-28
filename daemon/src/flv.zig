@@ -16,7 +16,7 @@ pub fn videoHeader(keyframe: bool, ptype: AvcPacketType, cts_ms: i32) [5]u8 {
     const c: u32 = @bitCast(cts_ms);
     return .{
         (@as(u8, if (keyframe) 1 else 2) << 4) | 7,
-        @intFromEnum(ptype),
+        @backingInt(ptype),
         @truncate(c >> 16),
         @truncate(c >> 8),
         @truncate(c),
@@ -25,13 +25,13 @@ pub fn videoHeader(keyframe: bool, ptype: AvcPacketType, cts_ms: i32) [5]u8 {
 
 /// 2-byte audio tag body header: AAC, 44kHz (as required for AAC), 16 bit, stereo.
 pub fn audioHeader(ptype: AacPacketType) [2]u8 {
-    return .{ 0xAF, @intFromEnum(ptype) };
+    return .{ 0xAF, @backingInt(ptype) };
 }
 
 /// Write an FLV tag (11 byte header, body = `head ++ data`, PreviousTagSize trailer).
 pub fn writeTag(w: *Writer, ttype: TagType, ts_ms: u32, head: []const u8, data: []const u8) Writer.Error!void {
     const size: u32 = @intCast(head.len + data.len);
-    try w.writeByte(@intFromEnum(ttype));
+    try w.writeByte(@backingInt(ttype));
     try w.writeInt(u24, @intCast(size), .big);
     try w.writeInt(u24, @truncate(ts_ms), .big);
     try w.writeByte(@truncate(ts_ms >> 24));
@@ -92,8 +92,10 @@ test "flv video tag bytes" {
     const expect = [_]u8{
         9, 0, 0, 7, // type, size=5+2
         0x02, 0x03, 0x04, 0x01, // ts lower 24 then ext
-        0, 0, 0, // stream id
-        0x17, 0x01, 0, 0, 0, 0xDE, 0xAD,
+        0,    0,    0, // stream id
+        0x17, 0x01, 0,
+        0,    0,    0xDE,
+        0xAD,
         0, 0, 0, 18, // prev tag size = 11 + 7
     };
     try testing.expectEqualSlices(u8, &expect, w.buffered());

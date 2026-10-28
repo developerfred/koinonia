@@ -10,6 +10,8 @@ const rtmp = @import("rtmp.zig");
 const flv = @import("flv.zig");
 const Allocator = std.mem.Allocator;
 
+const log = std.log.scoped(.fanout);
+
 pub const ItemKind = enum { video, audio };
 
 pub const Item = struct {
@@ -265,20 +267,34 @@ pub const Fanout = struct {
 /// After a successful `Publisher.publish`, send metadata and configs, then pump queued media
 /// until the queue is closed (returns normally, sending end-of-stream) or an I/O error occurs.
 pub fn pump(fan: *Fanout, sink: *Sink, pub_: *rtmp.Publisher) !void {
+    // Read the server's control traffic concurrently (window acks, pings, chunk size changes);
+    // otherwise long streams get dropped for never acknowledging received bytes.
+    pub_.enableLocking(fan.io);
+    var ctl_err: std.atomic.Value(bool) = .init(false);
+    var ctl: Io.Group = .init;
+    defer ctl.cancel(fan.io);
+    ctl.concurrent(fan.io, controlLoop, .{ pub_, &ctl_err }) catch |e| {
+        log.warn("control reader unavailable ({s}); acks disabled", .{@errorName(e)});
+    };
+
     var snap = try fan.snapshot();
     defer fan.freeSnapshot(snap);
     try pub_.sendMetadata(snap.meta);
-    try sendConfigs(pub_, snap);
+    try sendConfigs(pub_, snap, 0, 0);
     sink.setState(.live);
 
     var base: ?u32 = null;
     var last_ts: u32 = 0;
+    var last_v_ts: u32 = 0; // per-track: a header must not be stamped later than that track's next frame
+    var last_a_ts: u32 = 0;
     while (sink.queue.pop(fan.io)) |item| {
         defer fan.gpa.free(item.data);
+        if (ctl_err.load(.acquire)) return error.ConnectionClosed;
         if (fan.version() != snap.version) {
             fan.freeSnapshot(snap);
             snap = try fan.snapshot();
-            try sendConfigs(pub_, snap);
+            // re-sent sequence headers must carry the current stream time, not 0 (timestamps may never go backwards)
+            try sendConfigs(pub_, snap, last_v_ts, last_a_ts);
         }
         const b = base orelse blk: {
             base = item.ts;
@@ -286,6 +302,7 @@ pub fn pump(fan: *Fanout, sink: *Sink, pub_: *rtmp.Publisher) !void {
         };
         const ts = if (item.ts >= b) item.ts - b else 0;
         last_ts = ts;
+        if (item.kind == .video) last_v_ts = ts else last_a_ts = ts;
         switch (item.kind) {
             .video => try pub_.sendVideo(ts, item.key, item.cts, item.data),
             .audio => try pub_.sendAudio(ts, item.data),
@@ -294,9 +311,16 @@ pub fn pump(fan: *Fanout, sink: *Sink, pub_: *rtmp.Publisher) !void {
     try pub_.sendEndOfStream(last_ts);
 }
 
-fn sendConfigs(pub_: *rtmp.Publisher, snap: Fanout.ParamsSnapshot) !void {
-    if (snap.video_config) |v| try pub_.sendVideoConfig(0, v);
-    if (snap.audio_config) |a| try pub_.sendAudioConfig(0, a);
+fn controlLoop(pub_: *rtmp.Publisher, failed: *std.atomic.Value(bool)) void {
+    const err = pub_.serviceControl();
+    // Cancellation (pump finished) and a clean close are not flagged here: after a close the
+    // next media write fails and the destination loop reconnects. Protocol/IO errors are.
+    if (err != error.Canceled and err != error.EndOfStream) failed.store(true, .release);
+}
+
+fn sendConfigs(pub_: *rtmp.Publisher, snap: Fanout.ParamsSnapshot, v_ts: u32, a_ts: u32) !void {
+    if (snap.video_config) |v| try pub_.sendVideoConfig(v_ts, v);
+    if (snap.audio_config) |a| try pub_.sendAudioConfig(a_ts, a);
 }
 
 const testing = std.testing;
