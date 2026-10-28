@@ -50,6 +50,7 @@ const server = http.createServer((req, res) => {
 await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
 const port = (server.address() as import("node:net").AddressInfo).port;
 const urls = pages.map((f) => `http://127.0.0.1:${port}${base}${f.slice(DIST.length).replace(/index\.html$/, "")}`);
+const axeHits = new Map<string, { msg: string; pages: string[] }>();
 const browser = await chromium.launch();
 try {
   for (const scheme of ["light", "dark"] as const) {
@@ -58,13 +59,20 @@ try {
       const page = await ctx.newPage();
       await page.goto(u, { waitUntil: "load" });
       const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]).analyze();
-      for (const v of r.violations.filter((x) => x.impact === "critical" || x.impact === "serious" || process.env.QA_AXE_STRICT)) fail(`axe[${scheme}] ${u.replace(/^http:\/\/127\.0\.0\.1:\d+/, "")}: ${v.id} (${v.impact}) x${v.nodes.length} [${v.nodes[0]?.target.join(" ")}] ${v.help}`);
+      for (const v of r.violations.filter((x) => x.impact === "critical" || x.impact === "serious" || process.env.QA_AXE_STRICT)) {
+        const target = v.nodes.map((n) => n.target.join(" ")).slice(0, 2).join(" | ");
+        const k = `${scheme}|${v.id}|${target}`;
+        const e = axeHits.get(k) ?? { msg: `axe[${scheme}] ${v.id} (${v.impact}) [${target}] ${v.help}`, pages: [] };
+        e.pages.push(u.replace(/^http:\/\/127\.0\.0\.1:\d+/, "")); axeHits.set(k, e);
+      }
       await page.close();
     }
     await ctx.close();
     console.log(`[site] axe ${scheme}: ${urls.length} pages scanned`);
   }
 } finally { await browser.close(); }
+
+for (const { msg, pages: ps } of axeHits.values()) fail(`${msg} -- ${ps.length} page(s), e.g. ${ps[0]}`);
 
 // 4. Lighthouse (opt-in: slow, needs the lighthouse package via npx)
 if (process.env.QA_LIGHTHOUSE) {

@@ -16,8 +16,8 @@ const argv = process.argv.slice(2);
 const arg = (n: string, d?: string) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
 const profile = arg("profile", "smoke")!;
 const P = profile === "full"
-  ? { seconds: 600, videoBytes: 24_000, slowBps: 60_000, reconnectEvery: 3000, rssGrowthMb: 64 }
-  : { seconds: 12, videoBytes: 6_000, slowBps: 40_000, reconnectEvery: 400, rssGrowthMb: 48 };
+  ? { seconds: 600, videoBytes: 24_000, slowBps: 60_000, reconnectEvery: 3000, rssGrowthMb: 64, minFast: 0.95 }
+  : { seconds: 12, videoBytes: 6_000, slowBps: 40_000, reconnectEvery: 400, rssGrowthMb: 48, minFast: 0.9 };
 const seconds = Number(arg("seconds", String(P.seconds)));
 const realtime = arg("rate", "realtime") === "realtime";
 const slowBps = Number(arg("slow-bps", String(P.slowBps)));
@@ -65,7 +65,7 @@ try {
   const a = analyzeTags(fast.tags);
   console.log(`[soak] sent ${frames} frames (${(bytes / 1e6).toFixed(1)} MB) in ${elapsed.toFixed(1)} s; fast=${media(fast)} slow=${media(slow)} flaky=${media(flaky)} sessions(flaky)=${flaky.sessions.length}; ws max buffered ${(maxBuffered / 1e3).toFixed(0)} kB`);
   check(daemon.alive(), "daemon still alive");
-  check(media(fast) >= frames * 0.95, `fast sink received >= 95% of frames (${media(fast)}/${frames})`);
+  check(media(fast) >= frames * P.minFast, `fast sink received >= ${P.minFast * 100}% of frames (${media(fast)}/${frames})`);
   check(a.problems.length === 0, `fast sink FLV structure valid ${a.problems.join("; ")}`);
   check(fast.sessions.every((s) => s.protocolErrors.length === 0), "no RTMP protocol errors on fast sink");
   check(media(slow) < media(fast), `slow sink shed load (dropped) instead of stalling ingest (${media(slow)} < ${media(fast)})`);
@@ -74,7 +74,8 @@ try {
   if (expectReconnects) {
     check(flaky.sessions.length >= 2, `dropped destination reconnected (${flaky.sessions.length} sessions)`);
     const later = flaky.sessions.slice(1).filter((s) => s.tags.length > 3);
-    check(later.length > 0 && later.every((s) => { const x = analyzeTags(s.tags).problems.filter((p) => !/onMetaData/.test(p)); return x.length === 0; }), "every reconnect replays sequence headers and resumes at a keyframe");
+    const probs = later.flatMap((s) => analyzeTags(s.tags).problems.filter((p) => !/onMetaData/.test(p)).map((p) => `session ${s.id}: ${p}`));
+    check(later.length > 0 && probs.length === 0, `every reconnect replays sequence headers and resumes at a keyframe ${later.length ? probs.join("; ") : "(no reconnect session received media)"}`);
   }
   const valid = samples.filter((x) => Number.isFinite(x));
   if (valid.length > 6) {

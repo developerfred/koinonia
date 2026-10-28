@@ -11,11 +11,12 @@ export class FakeDaemonWs {
     this.wss = new WebSocketServer({ host: "127.0.0.1", port, path: "/ingest" });
     this.wss.on("connection", (ws) => {
       this.connections++;
-      ws.send(JSON.stringify({ type: "ready", version: 1 }));
+      const status = (o: unknown) => ws.send(Buffer.concat([Buffer.from([0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0]), Buffer.from(JSON.stringify(o))])); // status frame (0x80) per PROTOCOL.md
+      status({ type: "ready", version: 1 });
       ws.on("message", (d, isBin) => {
         if (!isBin) { this.received.push({ bytes: new Uint8Array(), error: "text message" }); return; }
         const bytes = new Uint8Array(d as Buffer);
-        try { this.received.push({ bytes, frame: decode(bytes) }); } catch (e) { this.received.push({ bytes, error: (e as Error).message }); }
+        try { const frame = decode(bytes); this.received.push({ bytes, frame }); if (frame.kind === 0x01) status({ type: "started", destinations: [] }); } catch (e) { this.received.push({ bytes, error: (e as Error).message }); }
       });
     });
     await new Promise<void>((r) => this.wss.once("listening", () => r()));

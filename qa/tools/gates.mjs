@@ -102,7 +102,7 @@ function chromiumMissing() {
 
 function sh(cmd, argv, cwd, logId, env = {}) {
   return new Promise((res) => {
-    const log = createWriteStream(join(LOGS, `${logId}.log`), { flags: "a" });
+    const log = createWriteStream(join(LOGS, `${logId}.log`), { flags: "w" });
     const p = spawn(cmd, argv, { cwd, env: { ...process.env, FORCE_COLOR: "0", ...env }, stdio: ["ignore", "pipe", "pipe"] });
     p.stdout.on("data", (d) => log.write(d)); p.stderr.on("data", (d) => log.write(d));
     p.on("error", (e) => { log.write(String(e)); res(127); });
@@ -112,15 +112,19 @@ function sh(cmd, argv, cwd, logId, env = {}) {
 const which = async (c) => (await sh("sh", ["-c", `command -v ${c}`], ROOT, "which")) === 0;
 
 async function auditAll() {
+  // Policy: HIGH/CRITICAL advisories in *production* dependencies fail the gate. Dev-tooling advisories (vitest/vite/esbuild/happy-dom)
+  // are reported but only fail with QA_AUDIT_DEV=1, because they never ship and the fix is a breaking toolchain upgrade.
   let worst = 0; let net = 0;
-  for (const d of ["qa", "studio", "tokens", "agents", "site"]) {
+  for (const d of ["qa", "studio", "tokens", "agents", "site", "desktop"]) {
     if (!has(d, "package-lock.json")) { console.log(`${d}: no package-lock.json (skipped)`); continue; }
-    const logId = `audit-${d}`;
-    const code = await sh("npm", ["audit", "--audit-level=high", "--package-lock-only"], join(ROOT, d), logId);
-    const out = readFileSync(join(LOGS, `${logId}.log`), "utf8");
-    if (code !== 0 && /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|network/i.test(out)) { console.log(`${d}: audit endpoint unreachable (offline)`); net++; continue; }
-    console.log(`${d}: ${code === 0 ? "no high/critical advisories" : "HIGH/CRITICAL advisories found (see logs/" + logId + ".log)"}`);
-    if (code !== 0) worst = 1;
+    const cwd = join(ROOT, d);
+    const prod = await sh("npm", ["audit", "--audit-level=high", "--omit=dev", "--package-lock-only"], cwd, `audit-${d}-prod`);
+    const prodOut = readFileSync(join(LOGS, `audit-${d}-prod.log`), "utf8");
+    if (prod !== 0 && /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|network/i.test(prodOut)) { console.log(`${d}: audit endpoint unreachable (offline)`); net++; continue; }
+    const all = await sh("npm", ["audit", "--audit-level=high", "--package-lock-only"], cwd, `audit-${d}-all`);
+    const summary = /(\d+ vulnerabilit[^\n]*)/.exec(readFileSync(join(LOGS, `audit-${d}-all.log`), "utf8"))?.[1] ?? "none";
+    console.log(`${d}: production deps ${prod === 0 ? "clean (no high/critical)" : "HIGH/CRITICAL FOUND"}; all deps incl. dev tooling: ${all === 0 ? "clean" : summary + " (dev-only, see logs/audit-" + d + "-all.log)"}`);
+    if (prod !== 0 || (all !== 0 && process.env.QA_AUDIT_DEV)) worst = 1;
   }
   return worst || (net ? 125 : 0); // 125 => SKIP (offline)
 }
