@@ -18,7 +18,7 @@ export const COMPONENTS = [
   { id: 'desktop', name: 'Desktop app', status: 'built', where: 'desktop/', note: 'One native Zig binary that runs the daemon, serves the studio and opens it as an app window in an installed Chromium-family browser. Built and tested on macOS arm64 only. No release downloads yet.' },
   { id: 'agents', name: 'Agents runtime', status: 'built', where: 'agents/', note: 'Orchestrator, five declarative agents (producer, moderator, clipper, analyst, economist), human-approval gate and token economist. Tests included; not yet run against a real stream.' },
   { id: 'platforms', name: 'Twitch and YouTube chat connectors', status: 'built', where: 'studio/src/', note: 'Code exists. Not yet verified against live Twitch or YouTube chat beyond the first test live.' },
-  { id: 'clips', name: 'Clips (daemon ring, mark and export tools)', status: 'built', where: 'daemon/, studio/src/tools/', note: 'Code exists. Vertical captioned clips and publishing are still planned.' },
+  { id: 'clips', name: 'Clips (daemon ring, mark and export tools)', status: 'wip', where: 'daemon/, studio/src/tools/', note: 'Code exists. Vertical captioned clips and publishing are still planned.' },
   { id: 'qa', name: 'QA harness', status: 'built', where: 'qa/', note: 'One command runs unit, contract, integration against fake RTMP sinks, end-to-end, fuzz and property, security, token-economy and site gates.' },
   { id: 'dashboard', name: 'Data panel UI (SSE/WebSocket)', status: 'planned', where: '-', note: 'Phase 5. The metrics store and query_window tool exist.' },
 ];
@@ -28,7 +28,7 @@ export const PHASES = [
   { n: 1, title: 'End-to-end spike', status: 'wip', body: 'Camera, WebCodecs, Zig daemon, Twitch. Both ends of the pipeline have code; live verification is pending.' },
   { n: 2, title: 'YouTube in parallel', status: 'wip', body: 'Daemon fan-out to several RTMPS destinations and chat connectors exist; verification against real YouTube is pending.' },
   { n: 3, title: 'Co-pilot WebMCP tools', status: 'wip', body: '14 tools registered with tests and a human approval queue for moderation; verification on real platforms is pending.' },
-  { n: 4, title: 'Clipper', status: 'built', body: 'Daemon MPEG-TS ring and mark/export tools exist; verification on a real stream is pending.' },
+  { n: 4, title: 'Clipper', status: 'wip', body: 'Daemon MPEG-TS ring and mark/export tools exist; verification on a real stream is pending.' },
   { n: 5, title: 'Data panel', status: 'wip', body: 'Metrics store and tools exist; the panel UI is pending.' },
   { n: 6, title: 'Token-economy agent', status: 'built', body: 'Toolkit and agents runtime built, consume and spend sides. Not yet run against a real stream.' },
   { n: 7, title: 'Docs, CI, release', status: 'wip', body: 'This site, the QA harness and the desktop app exist. A tagged release and download links are pending.' },

@@ -68,6 +68,15 @@ const ld = {
         t.parentNode.insertBefore(d, t); d.appendChild(t);
       }
     };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wrap); else wrap();
+    // Code blocks that overflow sideways need keyboard access too.
+    var pres = function () {
+      var ps = document.querySelectorAll('.sl-markdown-content pre');
+      for (var i = 0; i < ps.length; i++) {
+        var p = ps[i];
+        if (p.scrollWidth > p.clientWidth && !p.hasAttribute('tabindex')) { p.tabIndex = 0; p.setAttribute('role', 'region'); p.setAttribute('aria-label', 'Code sample'); }
+      }
+    };
+    var run = function () { wrap(); pres(); window.addEventListener('resize', pres); window.addEventListener('load', pres); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
   })();
 </script>
