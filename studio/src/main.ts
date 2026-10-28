@@ -11,13 +11,15 @@ import { TwitchConnector, UnifiedChat } from "../../connectors/src/index";
  *   ?daemon=ws://127.0.0.1:7878/ingest  &token=<KOINONIA_TOKEN>
  *   ?bridge=ws://127.0.0.1:9333         agents bridge (agents/ `koinonia-agents bridge`)
  *   ?twitch=<channel>                   anonymous read-only Twitch chat into the chat panel
- *   ?w=1920&h=1080&fps=30&vkbps=6000    encode settings
+ *   ?w=1920&h=1080&fps=30&vkbps=6000    encode settings;  &enc=auto|hardware|software
  */
 const q = new URLSearchParams(location.search);
 const n = (k: string) => { const v = Number(q.get(k)); return Number.isFinite(v) && v > 0 ? v : undefined; };
 const studio = new Studio({
   daemonUrl: q.get("daemon") ?? undefined, token: q.get("token") ?? undefined,
-  cfg: { width: n("w"), height: n("h"), fps: n("fps"), videoBitrate: n("vkbps") ? n("vkbps")! * 1000 : undefined } as never,
+  cfg: { width: n("w"), height: n("h"), fps: n("fps"), videoBitrate: n("vkbps") ? n("vkbps")! * 1000 : undefined,
+    bitrateMode: (q.get("br") as "constant" | "variable" | null) ?? undefined,
+    encoder: (q.get("enc") as "auto" | "hardware" | "software" | null) ?? undefined },
 });
 const tools = buildTools(studio);
 const reg = registerAll(tools);

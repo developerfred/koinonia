@@ -3,10 +3,11 @@ import { MetricsStore } from "./metrics";
 import { SceneState } from "./scene";
 import { FLAG_KEY, Kind } from "./protocol";
 import { Transport, type DaemonStatus } from "./transport";
+import { sanitizeCfg } from "./encoder-config";
 import { ApprovalQueue } from "./approvals";
 import { makeModExecutor, type ModConnector } from "./moderation";
-import { TokenAccounting, totalTokens, type UsageEvent } from "./usage";
-import { detectSupport, fallbackMessage, probeCodecs } from "./support";
+import { TokenAccounting, type UsageEvent } from "./usage";
+import { codecFailureMessage, detectSupport, fallbackMessage, probeCodecs } from "./support";
 import type { StudioApi } from "./tools/types";
 import type { EncodeConfig, FromWorker, ToWorker } from "./worker/messages";
 
@@ -34,7 +35,7 @@ export class Studio implements StudioApi {
   transport: Transport;
   readonly cfg: EncodeConfig;
   /** wall clock (ms) of session t0 (dts 0) and counters for external measurement (qa / benchmarks) */
-  diag = { wallStartMs: 0, framesEncoded: 0, workerFps: 0, encQueue: 0, aacChunks: 0, dests: {} as Record<string, string>, lastStatus: null as DaemonStatus | null, errors: [] as string[], trace: false, log: [] as [number, number, number, number][], codecs: null as null | { video: boolean; audio: boolean } };
+  diag = { wallStartMs: 0, framesEncoded: 0, workerFps: 0, encQueue: 0, aacChunks: 0, dests: {} as Record<string, string>, lastStatus: null as DaemonStatus | null, errors: [] as string[], encoder: "" as string, bitrateMode: "" as string, warnings: [] as string[], trace: false, log: [] as [number, number, number, number][], codecs: null as null | { video: boolean; audio: boolean } };
   private worker: Worker | null = null;
   private state = "idle";
   private streams: { cam?: MediaStream; screen?: MediaStream } = {};
@@ -50,7 +51,7 @@ export class Studio implements StudioApi {
 
   constructor(o: StudioOptions | string = {}) {
     const opt: StudioOptions = typeof o === "string" ? { daemonUrl: o } : o;
-    this.cfg = { ...DEFAULT_CFG, ...opt.cfg };
+    this.cfg = sanitizeCfg({ ...DEFAULT_CFG, ...Object.fromEntries(Object.entries(opt.cfg ?? {}).filter(([, v]) => v !== undefined)) } as EncodeConfig);
     let url = opt.daemonUrl;
     if (url && opt.token && !/[?&]token=/.test(url)) url += (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(opt.token);
     this.transport = new Transport(url);
@@ -152,6 +153,8 @@ export class Studio implements StudioApi {
         if (this.diag.trace && this.diag.log.length < 200_000) this.diag.log.push([m.kind === "video" ? 0 : 1, m.dtsMs, Date.now(), m.data.byteLength]);
         this.transport.send(m.kind === "video" ? Kind.VIDEO_CHUNK : Kind.AUDIO_CHUNK, m.key && m.kind === "video" ? FLAG_KEY : 0, m.dtsMs, m.ctsMs, m.data);
         break;
+      case "encoder": this.diag.encoder = m.mode; this.diag.bitrateMode = m.bitrateMode; break;
+      case "warn": this.log("worker: " + m.msg); this.diag.warnings.push(m.msg); break;
       case "started": this.diag.wallStartMs = m.wallStartMs; break;
       case "stats":
         this.diag.workerFps = m.fps; this.diag.encQueue = m.encQueue;
@@ -169,8 +172,8 @@ export class Studio implements StudioApi {
     if (!this.worker) return { state: "error", detail: "enable camera or screen first" };
     const codecs = await probeCodecs(this.cfg.width, this.cfg.height, this.cfg.fps);
     this.diag.codecs = codecs;
-    if (!codecs.video) return { state: "unsupported", detail: "H.264 encoding unavailable in this browser" };
-    if (!codecs.audio) return { state: "unsupported", detail: "AAC encoding unavailable (WebCodecs AAC needs Chrome on Win/macOS or recent builds); Opus fallback needs daemon transcode (not implemented)" };
+    const why = codecFailureMessage(codecs);
+    if (why) return { state: "unsupported", detail: why };
     const c = this.cfg;
     try {
       await this.transport.connect({

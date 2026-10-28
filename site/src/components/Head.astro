@@ -35,3 +35,39 @@ const ld = {
 <script>
   import '../scripts/docs-tools.ts';
 </script>
+<script is:inline>
+  // Starlight's search button is labelled "Search" but its visible text also includes the "Ctrl K" hint.
+  // WCAG 2.5.3: the accessible name must contain the visible text.
+  (function () {
+    var fix = function () {
+      var b = document.querySelector('button[data-open-modal]');
+      if (!b) return;
+      var mac = /Mac|iPhone|iPad/.test(navigator.platform || '');
+      b.setAttribute('aria-label', 'Search ' + (mac ? '\u2318 K' : 'Ctrl K'));
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fix); else fix();
+  })();
+
+  // Wide Markdown tables scroll sideways: make each one a named, keyboard-focusable region (WCAG 2.1.1).
+  (function () {
+    var wrap = function () {
+      var tables = document.querySelectorAll('.sl-markdown-content table');
+      for (var i = 0; i < tables.length; i++) {
+        var t = tables[i];
+        if (t.parentElement && t.parentElement.classList.contains('table-scroll')) continue;
+        var h = t, label = '';
+        while (h && !label) {
+          h = h.previousElementSibling;
+          if (h && /^H[1-6]$/.test(h.tagName) || (h && h.classList.contains('sl-heading-wrapper'))) label = (h.querySelector('h1,h2,h3,h4,h5,h6') || h).textContent.replace(/Section titled.*$/, '').trim();
+        }
+        if (!label) label = (document.querySelector('h1') || {}).textContent || 'Page';
+        var cap = t.querySelector('caption');
+        var d = document.createElement('div');
+        d.className = 'table-scroll'; d.setAttribute('role', 'region'); d.tabIndex = 0;
+        d.setAttribute('aria-label', (cap ? cap.textContent.trim() : label) + ', table');
+        t.parentNode.insertBefore(d, t); d.appendChild(t);
+      }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wrap); else wrap();
+  })();
+</script>

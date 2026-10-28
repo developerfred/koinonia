@@ -103,3 +103,15 @@ describe("approvals panel + token panel", () => {
   });
 });
 void ChatBuffer; void TokenAccounting;
+
+describe("Studio config", () => {
+  it("undefined overrides keep defaults (URL params absent)", () => {
+    const s = new Studio({ cfg: { width: undefined, fps: 60, encoder: undefined } as never });
+    expect(s.cfg).toMatchObject({ width: 1280, height: 720, fps: 60 });
+    expect(s.cfg.encoder).toBeUndefined();
+  });
+  it("appends the daemon token as a query param", () => {
+    const s = new Studio({ daemonUrl: "ws://127.0.0.1:7878/ingest", token: "a b" });
+    expect((s.transport as unknown as { url: string }).url).toBe("ws://127.0.0.1:7878/ingest?token=a%20b");
+  });
+});

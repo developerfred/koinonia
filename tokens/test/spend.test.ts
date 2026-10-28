@@ -13,6 +13,12 @@ describe("ModelRouter", () => {
     expect(r.route({ text: "x", task: "stream-plan", degradeSteps: 1 }).model).toBe(MODEL_IDS.medium);
     expect(r.route({ text: "oi", degradeSteps: 2 }).tier).toBe("small");
   });
+  it("degrading never raises the tier, even when the floor is above the natural tier", () => {
+    const f = new ModelRouter({ floor: "medium" });
+    expect(f.route({ text: "oi", degradeSteps: 1 }).tier).toBe("small");
+    expect(f.route({ text: "x", hint: "large", degradeSteps: 2 }).tier).toBe("medium");
+    expect(f.route({ text: "x", hint: "large", degradeSteps: 1 }).tier).toBe("medium");
+  });
 });
 
 describe("planCache", () => {

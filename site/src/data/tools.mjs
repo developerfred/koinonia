@@ -1,7 +1,8 @@
 // WebMCP tool contract for the Koinonia studio. Schemas mirror studio/src/tools/tools.ts (read at authoring time).
 // status: built = registered in the studio tool layer with tests; wip = registered but depends on platform/daemon
 // integration that is not finished; planned = not in the code yet.
-// Human confirmation for sensitive tools is a design commitment: it is NOT implemented in studio/ yet.
+// Moderation tools (ban_user, timeout_user, delete_message) are proposals behind a human approval queue (studio/src/approvals.ts).
+// A confirmation step for going live (start_stream/stop_stream) is still a design commitment.
 
 export const GROUPS = {
   copilot: { title: 'Production co-pilot', blurb: 'Read chat, run the show, go live.' },
@@ -82,7 +83,7 @@ export const TOOLS = [
   {
     name: 'start_stream', group: 'copilot', status: 'wip', sensitive: true,
     summary: 'Start encoding and send to the daemon.',
-    description: 'Starts encoding and streaming through the daemon to the chosen targets (all configured destinations when omitted). Going live is treated as sensitive: the design is that the studio asks the human to confirm first. That confirmation gate is not implemented yet.',
+    description: 'Starts encoding and streaming through the daemon to the chosen targets (all configured destinations when omitted). Going live is treated as sensitive: the design is that the studio asks the human to confirm first. That confirmation gate for going live is not implemented yet.',
     input: obj({ targets }),
     call: { targets: ['twitch', 'youtube'] },
     result: { state: 'live' },
@@ -106,13 +107,13 @@ export const TOOLS = [
     resultNote: 'Defaults: width 320, quality 0.6.',
   },
   {
-    name: 'ban_user', group: 'copilot', status: 'planned', sensitive: true,
-    summary: 'Ban or time out a chatter. Always human-confirmed.',
-    description: 'Proposed moderation tool, not in the code yet. It must never execute without an explicit human confirmation in the studio UI, and that rule is not configurable.',
+    name: 'ban_user', group: 'copilot', status: 'wip', sensitive: true,
+    summary: 'Propose banning a chatter. Always human-approved.',
+    description: 'Moderation proposal. Calling it never bans anyone: it queues an item in the studio approval panel, and only a human approval executes it. Not yet exercised against real Twitch or YouTube.',
     input: obj({ platform: { enum: ['twitch', 'youtube'] }, user: { type: 'string' }, duration_s: { type: 'integer', minimum: 1, description: 'Omit for a permanent ban.' }, reason: { type: 'string', maxLength: 200 } }, ['platform', 'user']),
     call: { platform: 'twitch', user: 'spam_bot_42', reason: 'link spam' },
-    result: { state: 'awaiting_confirmation', confirm_id: 'cf_9' },
-    resultNote: 'Proposed shape.',
+    result: { status: 'pending_approval', id: 'ap_9', note: 'NOT executed. The streamer must approve it in the studio.' },
+    resultNote: 'Result shape is illustrative.',
   },
   {
     name: 'mark_highlight', group: 'clipper', status: 'built', sensitive: false,

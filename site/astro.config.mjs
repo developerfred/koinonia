@@ -36,7 +36,7 @@ export default defineConfig({
         { tag: 'link', attrs: { rel: 'alternate', type: 'text/plain', href: '/koinonia/llms.txt', title: 'llms.txt' } },
       ],
       sidebar: [
-        { label: 'Start here', items: ['docs', 'docs/status', 'docs/quickstart'] },
+        { label: 'Start here', items: ['docs', 'docs/status', 'docs/quickstart', 'docs/desktop'] },
         {
           label: 'Concepts',
           items: ['docs/concepts/architecture', 'docs/concepts/webmcp', 'docs/concepts/cursors-and-deltas', 'docs/concepts/views'],

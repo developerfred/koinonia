@@ -23,8 +23,9 @@ const RES = Number(flag("res", 720));
 const SECONDS = Number(flag("seconds", 40));
 const BG_SECONDS = Number(flag("bg-seconds", 20));
 const HEADLESS = !!flag("headless", false);
+const BR = flag("br", "");
 const WITH_BRIDGE = !flag("no-bridge", false);
-const OUT = resolve(HERE, flag("out", `results/e2e-${RES}p-${HEADLESS ? "headless" : "headed"}.json`));
+const OUT = resolve(HERE, flag("out", `results/e2e-${RES}p-${HEADLESS ? "headless" : "headed"}${flag("br", "") ? "-" + flag("br", "") : ""}.json`));
 const [W, H, VKBPS] = RES === 1080 ? [1920, 1080, 6000] : [1280, 720, 3000];
 const DAEMON = join(ROOT, "daemon/zig-out/bin/koinonia-d");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -73,6 +74,7 @@ const dport = 20000 + Math.floor(Math.random() * 20000);
 const clipDir = join(tmp, "clips"); mkdirSync(clipDir);
 const dproc = spawn(DAEMON, [], { cwd: tmp, env: { PATH: process.env.PATH, HOME: process.env.HOME, KOINONIA_PORT: String(dport), KOINONIA_CLIP_DIR: clipDir, KOINONIA_CLIP_SECONDS: "120",
   KOINONIA_TWITCH_URL: sink.url("live"), KOINONIA_TWITCH_KEY: "e2e_key" }, stdio: ["ignore", "pipe", "pipe"] });
+let dexit = null; dproc.on("exit", (c, sg) => { dexit = { code: c, signal: sg, at: Date.now() }; });
 let dlog = ""; dproc.stdout.on("data", (d) => (dlog += d)); dproc.stderr.on("data", (d) => (dlog += d));
 await sleep(500);
 if (dproc.exitCode !== null) throw new Error("daemon exited: " + dlog);
@@ -97,6 +99,7 @@ const pageErrors = []; page.on("pageerror", (e) => pageErrors.push(e.message)); 
 const cdp = await browser.newBrowserCDPSession();
 const procCpu = async () => { const { processInfo } = await cdp.send("SystemInfo.getProcessInfo"); const o = {}; for (const p of processInfo) o[p.type + ":" + p.id] = p.cpuTime; return o; };
 
+const marks = []; const mark = (name) => marks.push({ name, wall: Date.now() });
 const stats = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = a.reduce((x, y) => x + y, 0) / a.length; const sd = Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); const q = (p) => s[Math.min(s.length - 1, Math.floor(p * s.length))]; return { n: a.length, mean: +m.toFixed(2), sd: +sd.toFixed(2), min: +s[0].toFixed(2), p50: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), p99: +q(0.99).toFixed(2), max: +s[s.length - 1].toFixed(2) }; };
 
 // ---- resource sampler ---------------------------------------------------------------------------------------------------
@@ -119,7 +122,7 @@ async function sampleWindow(label, ms) {
 
 try {
   // ======== 1. load studio, probe codecs ========
-  const q = new URLSearchParams({ daemon: `ws://127.0.0.1:${dport}/ingest`, w: String(W), h: String(H), fps: "30", vkbps: String(VKBPS) });
+  const q = new URLSearchParams({ daemon: `ws://127.0.0.1:${dport}/ingest`, w: String(W), h: String(H), fps: "30", vkbps: String(VKBPS) }); if (BR) q.set("br", BR);
   let bridgeSrv = null, agentsMod = null;
   if (WITH_BRIDGE) { agentsMod = await import(join(tmp, "agents.mjs")); bridgeSrv = await new agentsMod.BridgeServer({ port: 0 }).listen(); q.set("bridge", `ws://127.0.0.1:${bridgeSrv.port}/?role=page`); }
   const tPage0 = performance.now();
@@ -185,6 +188,7 @@ try {
   await page.evaluate(() => { window.__koinonia.diag.trace = true; });
   const callTool = (n, a = {}) => page.evaluate(async ([n, a]) => JSON.parse((await window.__koinoniaTools.callTool(n, a)).content[0].text), [n, a]);
   const tStart = Date.now();
+  mark('start_stream');
   const startRes = await callTool("start_stream", {});
   result.startStream = startRes;
   if (startRes.state !== "live") { result.notes.push("start_stream did not go live: " + JSON.stringify(startRes)); throw new Error("not live: " + JSON.stringify(startRes)); }
@@ -196,14 +200,38 @@ try {
 
   // ======== 4. foreground steady state ========
   await sleep(3000); // warm-up
+  mark('foreground-begin');
   result.foreground = await sampleWindow("foreground", SECONDS * 1000);
 
   // ======== 5. clip export (daemon ring buffer) ========
+  mark('clip-begin');
   const clip = await callTool("export_clip", { seconds_back: 20, title: "e2e" });
-  result.clip = clip;
+  mark('clip-end'); result.clip = clip;
   if (clip.path) {
     const p = resolve(tmp, clip.path);
     result.clip.bytes = existsSync(p) ? statSync(p).size : null;
+  }
+
+  // ======== 6. background tab ========
+  mark('background-begin');
+  const other = await ctx.newPage(); await other.goto("about:blank"); await other.bringToFront();
+  await sleep(1500);
+  result.visibilityWhileBackground = await page.evaluate(() => document.visibilityState);
+  result.background = await sampleWindow("background-tab", BG_SECONDS * 1000);
+  mark('background-end');
+  await page.bringToFront(); await sleep(1500);
+  result.visibilityAfterReturn = await page.evaluate(() => document.visibilityState);
+  result.foregroundAgain = await sampleWindow("foreground-again", 8000);
+
+  // ======== 7. stop & analyse ========
+  const diag = await page.evaluate(() => { const d = window.__koinonia.diag; return { encoder: d.encoder, bitrateMode: d.bitrateMode, warnings: d.warnings, wallStartMs: d.wallStartMs, log: d.log, dests: d.dests, errors: d.errors, lastStatus: d.lastStatus, aac: d.aacChunks, enqueue: d.encQueue }; });
+  const metrics = await page.evaluate(() => { const m = window.__koinonia.metrics; const o = {}; for (const k of m.metrics()) o[k] = { last: m.query(k, 3600, "last").v, max: m.query(k, 3600, "max").v, avg: m.query(k, 3600, "avg").v }; return o; });
+  await callTool("stop_stream", {});
+  await sleep(1500);
+
+  // clip analysis runs AFTER the stream: execFileSync would block this process, which also hosts the RTMP sink, and distort latency
+  if (result.clip.path) {
+    const p = resolve(tmp, result.clip.path);
     try {
       const pr = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", p]).toString());
       result.clip.ffprobe = { format: pr.format.format_name, duration: +Number(pr.format.duration).toFixed(2), streams: pr.streams.map((s) => ({ codec: s.codec_name, type: s.codec_type, w: s.width, h: s.height, fps: s.avg_frame_rate, sr: s.sample_rate, ch: s.channels })) };
@@ -211,25 +239,12 @@ try {
     } catch (e) { result.clip.ffprobeError = String(e.message).slice(0, 200); }
   }
 
-  // ======== 6. background tab ========
-  const other = await ctx.newPage(); await other.goto("about:blank"); await other.bringToFront();
-  await sleep(1500);
-  result.visibilityWhileBackground = await page.evaluate(() => document.visibilityState);
-  result.background = await sampleWindow("background-tab", BG_SECONDS * 1000);
-  await page.bringToFront(); await sleep(1500);
-  result.visibilityAfterReturn = await page.evaluate(() => document.visibilityState);
-  result.foregroundAgain = await sampleWindow("foreground-again", 8000);
-
-  // ======== 7. stop & analyse ========
-  const diag = await page.evaluate(() => { const d = window.__koinonia.diag; return { wallStartMs: d.wallStartMs, log: d.log, dests: d.dests, errors: d.errors, lastStatus: d.lastStatus, aac: d.aacChunks, enqueue: d.encQueue }; });
-  const metrics = await page.evaluate(() => { const m = window.__koinonia.metrics; const o = {}; for (const k of m.metrics()) o[k] = { last: m.query(k, 3600, "last").v, max: m.query(k, 3600, "max").v, avg: m.query(k, 3600, "avg").v }; return o; });
-  await callTool("stop_stream", {});
-  await sleep(1500);
-
   const sess = sink.sessions[0];
   const arr = arrivals.get(sess);
   const an = analyzeTags(sess.tags);
   result.flv = { problems: an.problems, sessions: sink.sessions.length, videoTags: an.video.length, audioTags: an.audio.length, scriptTags: an.script.length, rtmpCommands: sess.commands.map((c) => c.name), publishedKey: sess.streamKey, protocolErrors: sess.protocolErrors };
+  { const T = sess.tags; let bi = -1; for (let i = 1, last = -1; i < T.length; i++) { if (T[i].type === 8) { if (T[i].ts < last) { bi = i; break; } last = T[i].ts; } }
+    result.tagDebug = { first: T.slice(0, 14).map((t) => [t.type, t.ts, t.body[1]]), backwardsIdx: bi, around: bi < 0 ? null : T.slice(Math.max(0, bi - 8), bi + 6).map((t) => [t.type, t.ts, t.body[1]]) }; }
   const vIdx = []; sess.tags.forEach((t, i) => { if (t.type === 9 && t.body[1] === 1) vIdx.push(i); });
   const vts = vIdx.map((i) => sess.tags[i].ts);
   const keyts = vIdx.filter((i) => sess.tags[i].body[0] >> 4 === 1).map((i) => sess.tags[i].ts);
@@ -260,7 +275,15 @@ try {
     compose_to_sink_ms: stats(lat), socket_to_sink_ms: stats(lastMile),
     encode_ms_compose_to_socket: stats(sentV.slice(0, n).map((e, k) => e[2] - (diag.wallStartMs + e[1]))),
   };
-  result.pageMetrics = metrics; result.pageDiag = { dests: diag.dests, errors: diag.errors, lastDaemonStatus: diag.lastStatus, audioChunksSent: diag.aac };
+  // timeline: per 5 s bucket since start_stream, with latency and tag counts, plus audio timestamp sanity
+  const t0w = marks[0].wall; const buckets = {};
+  for (let k = 0; k < n; k++) { const b = Math.floor((arr[vIdx[k]] - t0w) / 5000); (buckets[b] ??= []).push(lat[k]); }
+  result.timeline = Object.entries(buckets).map(([b, v]) => ({ t: b * 5, frames: v.length, lat_p50: stats(v).p50, lat_max: stats(v).max }));
+  result.marks = marks.map((m) => ({ name: m.name, t: +((m.wall - t0w) / 1000).toFixed(1) }));
+  const aSent = diag.log.filter((e) => e[0] === 1).map((e) => e[1]);
+  const ad = aSent.slice(1).map((x, i) => x - aSent[i]);
+  result.audioSent = { n: aSent.length, first: aSent.slice(0, 8), nonIncreasing: ad.filter((d) => d <= 0).length, deltaMs: stats(ad), backwardsAt: aSent.map((x, i) => (i && x < aSent[i - 1] ? [i, aSent[i - 1], x] : null)).filter(Boolean).slice(0, 5) };
+  result.pageMetrics = metrics; result.pageDiag = { encoder: diag.encoder, bitrateMode: diag.bitrateMode, warnings: diag.warnings, dests: diag.dests, errors: diag.errors, lastDaemonStatus: diag.lastStatus, audioChunksSent: diag.aac };
   // per-second sink fps in each phase can be derived from foreground/background windows above (sink_video_tags_per_sec)
 
   // ======== 8. real decode check of what the sink received ========
@@ -284,7 +307,7 @@ try {
   console.log(JSON.stringify(result, null, 1));
 } catch (e) {
   try { result.debugDiag = await page.evaluate(() => { const d = window.__koinonia.diag; const { log, ...rest } = d; return { ...rest, logN: log.length, state: window.__koinonia.streamState(), bp: window.__koinonia.transport.droppedForBackpressure }; }); } catch { /* page gone */ }
-  result.fatal = String(e.stack ?? e); result.pageErrors = pageErrors; result.daemonLogTail = dlog.split("\n").slice(-10);
+  result.fatal = String(e.stack ?? e); result.pageErrors = pageErrors; result.daemonLogTail = dlog.split("\n").slice(-15); result.daemonExit = dexit;
   console.error("E2E FAILED", e);
   process.exitCode = 1;
 } finally {

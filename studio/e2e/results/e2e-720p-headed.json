@@ -1,5 +1,5 @@
 {
- "when": "2026-10-26T21:40:23.308Z",
+ "when": "2026-10-28T13:48:46.749Z",
  "machine": {
   "cpu": "Apple M1",
   "cores": 8,
@@ -13,10 +13,10 @@
   "video_kbps": 3000,
   "headless": false,
   "seconds": 30,
-  "bgSeconds": 15
+  "bgSeconds": 20
  },
  "notes": [],
- "pageLoadMs": 1344,
+ "pageLoadMs": 1148,
  "codecProbe": {
   "webcodecs": {
    "VideoEncoder": "function",
@@ -34,25 +34,502 @@
    "opus": true
   }
  },
+ "bridge": {
+  "tools": [
+   "get_chat",
+   "create_poll",
+   "pin_message",
+   "switch_scene",
+   "set_layer",
+   "set_audio",
+   "set_overlay_text",
+   "start_stream",
+   "stop_stream",
+   "capture_frame",
+   "mark_highlight",
+   "export_clip",
+   "ban_user",
+   "timeout_user",
+   "delete_message",
+   "get_token_report",
+   "query_window",
+   "set_alert"
+  ],
+  "getChatViaBridge": 3,
+  "proposalShownInPage": "ban troll · Aguardando · Pedido por moderatorspamAprovarRecusar",
+  "executedBeforeApproval": 0,
+  "approvedWithoutConnector": "ban troll · Não executado · Pedido por moderatorspam{\"error\":\"not executed: no twitch connector attached (action approved but recorded only)\"}",
+  "approvedWithConnector": {
+   "ui": "timeout troll2 60s · Executado · Pedido por moderatorspam{\"status\":\"executed\",\"detail\":\"timeout_user executed on twitch for troll2\"}",
+   "connectorCalls": [
+    "timeout:uid-troll2:60",
+    "exec:p"
+   ]
+  },
+  "tokenReportViaBridge": {
+   "spent": 7648,
+   "budget": 200000,
+   "ratio": 0.03824,
+   "level": "ok",
+   "calls": 8,
+   "savingsRatio": 0
+  },
+  "tokenPanelText": "1.616 de 200.000 tokens",
+  "auditApprovalEvents": [
+   "approval.requested",
+   "approval.approved",
+   "approval.executed",
+   "approval.requested",
+   "approval.approved",
+   "approval.executed"
+  ]
+ },
  "startStream": {
   "state": "live"
  },
- "debugDiag": {
-  "wallStartMs": 1793050837932.5,
-  "framesEncoded": 0,
-  "workerFps": 0,
-  "encQueue": 0,
-  "aacChunks": 0,
+ "timeToFirstVideoTagMs": 1947,
+ "codecs": {
+  "video": true,
+  "audio": true,
+  "h264": {
+   "hardware": true,
+   "software": true,
+   "any": true
+  },
+  "errors": []
+ },
+ "foreground": {
+  "label": "foreground",
+  "seconds": 30.1,
+  "chrome_cpu_pct_of_one_core_by_process_type": {
+   "browser": 3.1,
+   "renderer": 30.3,
+   "GPU": 27.5,
+   "network.mojom.NetworkService": 1.4,
+   "storage.mojom.StorageService": 0,
+   "audio.mojom.AudioService": 2.7,
+   "video_capture.mojom.VideoCaptureService": 1.1
+  },
+  "chrome_cpu_total_pct": 66.1,
+  "daemon_cpu_pct_of_one_core": 3.49,
+  "daemon_rss_mb": 2.8,
+  "sink_video_tags_per_sec": 30.17,
+  "encoded_frames_per_sec": 30.17
+ },
+ "clip": {
+  "id": "clip-mvs687d8",
+  "state": "saved",
+  "path": "/var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-37N4vt/clips/clip-1793195375-e2e.ts",
+  "seconds": 21,
+  "bytes": 1681096,
+  "ffprobe": {
+   "format": "mpegts",
+   "duration": 21.69,
+   "streams": [
+    {
+     "codec": "h264",
+     "type": "video",
+     "w": 1280,
+     "h": 720,
+     "fps": "0/0"
+    },
+    {
+     "codec": "aac",
+     "type": "audio",
+     "fps": "0/0",
+     "sr": "48000",
+     "ch": 2
+    }
+   ]
+  },
+  "decodeErrors": "none"
+ },
+ "visibilityWhileBackground": "visible",
+ "background": {
+  "label": "background-tab",
+  "seconds": 20.1,
+  "chrome_cpu_pct_of_one_core_by_process_type": {
+   "browser": 5.8,
+   "renderer": 37.3,
+   "GPU": 21.8,
+   "network.mojom.NetworkService": 1.6,
+   "storage.mojom.StorageService": 0,
+   "audio.mojom.AudioService": 3.2,
+   "video_capture.mojom.VideoCaptureService": 2
+  },
+  "chrome_cpu_total_pct": 71.7,
+  "daemon_cpu_pct_of_one_core": 4.04,
+  "daemon_rss_mb": 2.8,
+  "sink_video_tags_per_sec": 26.85,
+  "encoded_frames_per_sec": 26.85
+ },
+ "visibilityAfterReturn": "visible",
+ "foregroundAgain": {
+  "label": "foreground-again",
+  "seconds": 8.6,
+  "chrome_cpu_pct_of_one_core_by_process_type": {
+   "browser": 2.8,
+   "renderer": 38.2,
+   "GPU": 22.3,
+   "network.mojom.NetworkService": 1.5,
+   "storage.mojom.StorageService": 0,
+   "audio.mojom.AudioService": 2.9,
+   "video_capture.mojom.VideoCaptureService": 1.8
+  },
+  "chrome_cpu_total_pct": 69.5,
+  "daemon_cpu_pct_of_one_core": 4.06,
+  "daemon_rss_mb": 2.8,
+  "sink_video_tags_per_sec": 28.67,
+  "encoded_frames_per_sec": 28.56
+ },
+ "flv": {
+  "problems": [],
+  "sessions": 1,
+  "videoTags": 1934,
+  "audioTags": 3312,
+  "scriptTags": 1,
+  "rtmpCommands": [
+   "connect",
+   "releaseStream",
+   "FCPublish",
+   "createStream",
+   "publish"
+  ],
+  "publishedKey": "e2e_key",
+  "protocolErrors": [],
+  "firstVideoNaluIsKeyframe": true,
+  "keyframeIntervalMs": {
+   "n": 32,
+   "mean": 2138.81,
+   "sd": 517.74,
+   "min": 1881,
+   "p50": 1980,
+   "p95": 4093,
+   "p99": 4119,
+   "max": 4119
+  },
+  "avgFpsFromTimestamps": 28,
+  "interFrameMs": {
+   "n": 1931,
+   "mean": 35.72,
+   "sd": 42.79,
+   "min": 15,
+   "p50": 33,
+   "p95": 35,
+   "p99": 89,
+   "max": 1283
+  },
+  "gapsOver2Frames": 23,
+  "estimatedMissedFrames": 160,
+  "sinkFpsPerSecond": {
+   "n": 67,
+   "mean": 28.3,
+   "sd": 7.42,
+   "min": 1,
+   "p50": 30,
+   "p95": 36,
+   "p99": 42,
+   "max": 42
+  },
+  "videoKbps": 410
+ },
+ "tagDebug": {
+  "first": [
+   [
+    18,
+    0,
+    0
+   ],
+   [
+    8,
+    0,
+    0
+   ],
+   [
+    8,
+    0,
+    1
+   ],
+   [
+    8,
+    21,
+    1
+   ],
+   [
+    8,
+    42,
+    1
+   ],
+   [
+    8,
+    64,
+    1
+   ],
+   [
+    8,
+    85,
+    1
+   ],
+   [
+    8,
+    106,
+    1
+   ],
+   [
+    8,
+    128,
+    1
+   ],
+   [
+    8,
+    149,
+    1
+   ],
+   [
+    8,
+    170,
+    1
+   ],
+   [
+    8,
+    192,
+    1
+   ],
+   [
+    8,
+    213,
+    1
+   ],
+   [
+    8,
+    234,
+    1
+   ]
+  ],
+  "backwardsIdx": -1,
+  "around": null
+ },
+ "latency": {
+  "definition": "wall time the video tag reaches the RTMP sink minus wall time of the frame's compositor timestamp (canvas draw -> VideoFrame -> encode -> WS -> daemon -> RTMP). Excludes camera capture/driver latency and any player/CDN.",
+  "base_consistency_sd_ms": 0,
+  "matched": 1908,
+  "compose_to_sink_ms": {
+   "n": 1908,
+   "mean": 82.56,
+   "sd": 325.06,
+   "min": 4.69,
+   "p50": 13.21,
+   "p95": 224.78,
+   "p99": 2364.55,
+   "max": 3018.19
+  },
+  "socket_to_sink_ms": {
+   "n": 1908,
+   "mean": 22.75,
+   "sd": 159.18,
+   "min": 1.07,
+   "p50": 3.13,
+   "p95": 31.37,
+   "p99": 488.16,
+   "max": 2311.9
+  },
+  "encode_ms_compose_to_socket": {
+   "n": 1908,
+   "mean": 59.81,
+   "sd": 225.55,
+   "min": 3.4,
+   "p50": 10.4,
+   "p95": 187.4,
+   "p99": 1504.4,
+   "max": 2424.4
+  }
+ },
+ "timeline": [
+  {
+   "t": 0,
+   "frames": 99,
+   "lat_p50": 14.13,
+   "lat_max": 277.17
+  },
+  {
+   "t": 5,
+   "frames": 153,
+   "lat_p50": 8.01,
+   "lat_max": 222.67
+  },
+  {
+   "t": 10,
+   "frames": 151,
+   "lat_p50": 7,
+   "lat_max": 20.38
+  },
+  {
+   "t": 15,
+   "frames": 151,
+   "lat_p50": 6.66,
+   "lat_max": 35.63
+  },
+  {
+   "t": 20,
+   "frames": 152,
+   "lat_p50": 9.98,
+   "lat_max": 61.91
+  },
+  {
+   "t": 25,
+   "frames": 145,
+   "lat_p50": 14.77,
+   "lat_max": 435.98
+  },
+  {
+   "t": 30,
+   "frames": 155,
+   "lat_p50": 10.93,
+   "lat_max": 135.69
+  },
+  {
+   "t": 35,
+   "frames": 142,
+   "lat_p50": 12.96,
+   "lat_max": 529.7
+  },
+  {
+   "t": 40,
+   "frames": 151,
+   "lat_p50": 11.32,
+   "lat_max": 35.27
+  },
+  {
+   "t": 45,
+   "frames": 64,
+   "lat_p50": 60.77,
+   "lat_max": 1859.66
+  },
+  {
+   "t": 50,
+   "frames": 160,
+   "lat_p50": 29.18,
+   "lat_max": 3018.19
+  },
+  {
+   "t": 55,
+   "frames": 112,
+   "lat_p50": 58.54,
+   "lat_max": 753.36
+  },
+  {
+   "t": 60,
+   "frames": 123,
+   "lat_p50": 103.15,
+   "lat_max": 2502.49
+  },
+  {
+   "t": 65,
+   "frames": 150,
+   "lat_p50": 31.72,
+   "lat_max": 135.86
+  }
+ ],
+ "marks": [
+  {
+   "name": "start_stream",
+   "t": 0
+  },
+  {
+   "name": "foreground-begin",
+   "t": 5
+  },
+  {
+   "name": "clip-begin",
+   "t": 35.1
+  },
+  {
+   "name": "clip-end",
+   "t": 35.1
+  },
+  {
+   "name": "background-begin",
+   "t": 35.1
+  },
+  {
+   "name": "background-end",
+   "t": 57.8
+  }
+ ],
+ "audioSent": {
+  "n": 3269,
+  "first": [
+   5,
+   26,
+   47,
+   69,
+   90,
+   111,
+   133,
+   154
+  ],
+  "nonIncreasing": 0,
+  "deltaMs": {
+   "n": 3268,
+   "mean": 21.33,
+   "sd": 0.47,
+   "min": 21,
+   "p50": 21,
+   "p95": 22,
+   "p99": 22,
+   "max": 22
+  },
+  "backwardsAt": []
+ },
+ "pageMetrics": {
+  "tokens": {
+   "last": 1219,
+   "max": 1219,
+   "avg": 956
+  },
+  "chat_msgs": {
+   "last": 1,
+   "max": 1,
+   "avg": 1
+  },
+  "fps": {
+   "last": 30,
+   "max": 31,
+   "avg": 30
+  },
+  "enc_dropped": {
+   "last": 200,
+   "max": 200,
+   "avg": 84.41
+  },
+  "ws_dropped": {
+   "last": 0,
+   "max": 0,
+   "avg": 0
+  },
+  "kbps": {
+   "last": 631,
+   "max": 690,
+   "avg": 482.91
+  }
+ },
+ "pageDiag": {
+  "encoder": "software",
+  "bitrateMode": "constant",
+  "warnings": [
+   "hardware H.264 encoder produced no output; falling back to software"
+  ],
   "dests": {
    "twitch": {
     "state": "live",
     "dropped": 0
    }
   },
-  "lastStatus": {
+  "errors": [],
+  "lastDaemonStatus": {
    "type": "stats",
-   "uptime_ms": 14214,
-   "in_kbps": 0,
+   "uptime_ms": 68828,
+   "in_kbps": 631,
    "dests": {
     "twitch": {
      "state": "live",
@@ -60,26 +537,45 @@
     }
    }
   },
-  "errors": [
-   "audio encoder: Input audio buffer is incompatible with codec parameters"
-  ],
-  "trace": true,
-  "codecs": {
-   "video": true,
-   "audio": true
-  },
-  "logN": 0,
-  "state": "live",
-  "bp": 0
+  "audioChunksSent": 3269
  },
- "fatal": "Error: RtmpSink: timeout waiting for first video frame (sessions=1, tags=1)\n    at RtmpSink.waitFor (file:///private/var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-3CXcur/sink.mjs:125:39)\n    at async file:///Users/fredericksilva/tholdres-app/studio/e2e/e2e.mjs:191:3",
+ "decode": {
+  "streams": [
+   {
+    "codec": "aac",
+    "type": "audio",
+    "fps": "0/0",
+    "sr": "44100",
+    "ch": 2
+   },
+   {
+    "codec": "h264",
+    "profile": "High",
+    "type": "video",
+    "w": 1280,
+    "h": 720,
+    "fps": "30/1"
+   }
+  ],
+  "duration": 70.6,
+  "ffmpegErrors": "[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 92 >= 92\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 94 >= 94\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 191 >= 191\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 193 >= 193\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 290 >= 290\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 389 >= 389\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 488 >= 488\n[null @ 0x74d020280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 588 >= 588"
+ },
  "pageErrors": [
   "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
-  "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+  "console: WebSocket connection to 'ws://127.0.0.1:53330/?role=page' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
  ],
  "daemonLogTail": [
-  "koinonia-d: ws://127.0.0.1:27864/ingest  clip buffer 120s -> /var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-3CXcur/clips/",
-  "  destination: twitch (rtmp://127.0.0.1:63706/live, key ****)",
+  "koinonia-d: ws://127.0.0.1:36264/ingest  clip buffer 120s -> /var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-37N4vt/clips/",
+  "  destination: twitch (rtmp://127.0.0.1:53323/live, key ****)",
   "info(session): ingest connected",
   ""
  ]

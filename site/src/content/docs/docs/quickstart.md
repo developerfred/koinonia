@@ -6,7 +6,7 @@ sidebar:
 ---
 
 :::caution[No verified end-to-end stream yet]
-The studio and daemon both have code, but the pipeline has not been verified against Twitch or YouTube. This quickstart runs the parts that have tests and shows the intended flow. Steps marked *Planned* or *Unverified* may not work yet.
+The studio, daemon and a desktop launcher all have code, but the pipeline has not been verified against real Twitch or YouTube apart from the maintainer's first test live. This quickstart runs the parts that have tests and shows the intended flow. Steps marked *Planned* or *Unverified* may not work yet.
 :::
 
 ## Requirements

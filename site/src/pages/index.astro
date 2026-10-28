@@ -143,9 +143,9 @@ const groups = Object.entries(GROUPS);
             <a class="btn" href={REPO}>GitHub</a>
           </div>
           <div class="hero-meta after">
-            <span class="chip built">Token toolkit built</span>
+            <span class="chip built">Desktop app, agents, QA harness built</span>
             <span class="chip wip">Studio, daemon, 14 tools in progress</span>
-            <span class="chip planned">Live verification pending</span>
+            <span class="chip planned">Real Twitch and YouTube verification pending</span>
           </div>
         </div>
 
@@ -153,7 +153,7 @@ const groups = Object.entries(GROUPS);
           <header><i class="tally" aria-hidden="true"></i><span>agent &harr; studio &middot; webmcp</span><span>illustrative</span></header>
 <pre aria-label="Example tool calls and responses"><span class="l"><span class="u">agent &rarr;</span> get_chat {'{'} since_cursor: 1184, limit: 30 {'}'}</span><span class="l"><span class="s">studio &larr;</span> {'{'} c: {delta.c}, m: [</span><span class="l d">          {'{'}u:"{compact[0].u}", t:"POG", x:{compact[0].x}{'}'},</span><span class="l d">          {'{'}u:"{compact[1].u}", t:"qual a trilha?", x:2{'}'}, ...</span><span class="l d">        ] {'}'}</span><span class="l k">        {fmt(tokRaw)} raw tokens &rarr; {fmt(tokCompact)} delivered</span><span class="l">&nbsp;</span><span class="l"><span class="u">agent &rarr;</span> switch_scene {'{'} scene: "gameplay" {'}'}</span><span class="l"><span class="s">studio &larr;</span> {'{'} scene: "gameplay", prev: "intro" {'}'}</span><span class="l">&nbsp;</span><span class="l"><span class="u">agent &rarr;</span> ban_user {'{'} platform: "twitch", user: "spam_bot_42" {'}'}</span><span class="l"><span class="s">studio &larr;</span> {'{'} state: "awaiting_confirmation" {'}'}</span><span class="l k">        waiting for a human to click Confirm</span></pre>
           <div class="save"><span class="mono">chat tokens saved (this sample)</span><b>-{saved}%</b></div>
-          <p class="note">Illustrative session, not a recording; the confirmation step is a design commitment, not yet implemented. The numbers are computed at build time from the sample chat below with the same dedupe rule as the implemented chat ring and a chars/4 estimate.</p>
+          <p class="note">Illustrative session, not a recording; moderation actions wait in a human approval queue in the studio; a confirm step for going live is still a design commitment. The numbers are computed at build time from the sample chat below with the same dedupe rule as the implemented chat ring and a chars/4 estimate.</p>
         </div>
       </div>
       <div class="greek decor" aria-hidden="true" lang="el">κοινωνία</div>
@@ -217,7 +217,7 @@ const groups = Object.entries(GROUPS);
         <div class="sec-head rv">
           <p class="eyebrow">WebMCP tools</p>
           <h2 id="tools-h">{TOOLS.length} tools. Reversible by default.</h2>
-          <p class="lede">Every tool has a schema, an example and a status. Anything that can hurt, a ban or going live, is designed to wait for a human click; that gate is not built yet.</p>
+          <p class="lede">Every tool has a schema, an example and a status. Anything that can hurt, a ban or going live, waits for a human click. Moderation tools queue for approval today; the going-live confirmation is not built yet.</p>
         </div>
         <div class="filters" role="group" aria-label="Filter tools by group" id="tool-filters">
           <button type="button" aria-pressed="true" data-g="all">All</button>
@@ -230,7 +230,7 @@ const groups = Object.entries(GROUPS);
               <p>{t.summary}</p>
               <span class="chips">
                 <span class={`chip ${t.status}`}>{dots(t.status)}</span>
-                {t.sensitive && <span class="chip lock">Confirm gate planned</span>}
+                {t.sensitive && <span class="chip lock">Human approval</span>}
               </span>
             </a>
           ))}

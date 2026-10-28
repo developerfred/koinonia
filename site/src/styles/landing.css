@@ -216,10 +216,11 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); text-de
 
 /* reveal */
 @media (prefers-reduced-motion: no-preference) {
-  html.js .rv { opacity: 0; transform: translateY(28px); transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out); transition-delay: calc(var(--i, 0) * 80ms); }
-  html.js .rv.in { opacity: 1; transform: none; }
+  /* Slide only, never fade: text must keep full opacity (and AA contrast) while it moves. */
+  html.js .rv { transform: translateY(28px); transition: transform 0.9s var(--ease-out); transition-delay: calc(var(--i, 0) * 80ms); }
+  html.js .rv.in { transform: none; }
   html.js .hero h1 .ln > span { transform: translateY(105%); animation: rise 1s var(--ease-out) forwards; animation-delay: calc(0.15s + var(--i, 0) * 0.09s); }
-  html.js .hero .after { opacity: 0; animation: fadein 1s var(--ease-out) forwards; animation-delay: 0.7s; }
+  html.js .hero .after { transform: translateY(14px); animation: rise 1s var(--ease-out) forwards; animation-delay: 0.7s; }
   html.js .greek { opacity: 0; animation: fadein 1.6s var(--ease-quart) forwards 0.3s; }
 }
 @keyframes rise { to { transform: none; } }

@@ -1,0 +1,512 @@
+{
+ "when": "2026-10-28T13:52:43.534Z",
+ "machine": {
+  "cpu": "Apple M1",
+  "cores": 8,
+  "ram_gb": 8,
+  "os": "macOS 26.5",
+  "browser": "156.0.8078.48"
+ },
+ "config": {
+  "res": "1280x720",
+  "fps": 30,
+  "video_kbps": 3000,
+  "headless": false,
+  "seconds": 30,
+  "bgSeconds": 20
+ },
+ "notes": [],
+ "pageLoadMs": 1104,
+ "codecProbe": {
+  "webcodecs": {
+   "VideoEncoder": "function",
+   "AudioEncoder": "function",
+   "MediaStreamTrackProcessor": "function",
+   "OffscreenCanvas": "function"
+  },
+  "h264": {
+   "any": true,
+   "preferHardware": true,
+   "preferSoftware": true
+  },
+  "audio": {
+   "aac_lc": true,
+   "opus": true
+  }
+ },
+ "startStream": {
+  "state": "live"
+ },
+ "timeToFirstVideoTagMs": 1804,
+ "codecs": {
+  "video": true,
+  "audio": true,
+  "h264": {
+   "hardware": true,
+   "software": true,
+   "any": true
+  },
+  "errors": []
+ },
+ "foreground": {
+  "label": "foreground",
+  "seconds": 30.1,
+  "chrome_cpu_pct_of_one_core_by_process_type": {
+   "browser": 3.6,
+   "renderer": 29.6,
+   "GPU": 30.6,
+   "network.mojom.NetworkService": 1.4,
+   "storage.mojom.StorageService": 0,
+   "audio.mojom.AudioService": 2.7,
+   "video_capture.mojom.VideoCaptureService": 0.7
+  },
+  "chrome_cpu_total_pct": 68.6,
+  "daemon_cpu_pct_of_one_core": 3.56,
+  "daemon_rss_mb": 3,
+  "sink_video_tags_per_sec": 28.19,
+  "encoded_frames_per_sec": 28.15
+ },
+ "clip": {
+  "id": "clip-mvs6d75w",
+  "state": "saved",
+  "path": "/var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-j0AFfj/clips/clip-1793195608-e2e.ts",
+  "seconds": 21,
+  "bytes": 911424,
+  "ffprobe": {
+   "format": "mpegts",
+   "duration": 21.46,
+   "streams": [
+    {
+     "codec": "h264",
+     "type": "video",
+     "w": 1280,
+     "h": 720,
+     "fps": "0/0"
+    },
+    {
+     "codec": "aac",
+     "type": "audio",
+     "fps": "0/0",
+     "sr": "48000",
+     "ch": 2
+    }
+   ]
+  },
+  "decodeErrors": "none"
+ },
+ "visibilityWhileBackground": "visible",
+ "background": {
+  "label": "background-tab",
+  "seconds": 20,
+  "chrome_cpu_pct_of_one_core_by_process_type": {
+   "browser": 2.8,
+   "renderer": 31.2,
+   "GPU": 17.4,
+   "network.mojom.NetworkService": 1.4,
+   "storage.mojom.StorageService": 0,
+   "audio.mojom.AudioService": 2.7,
+   "video_capture.mojom.VideoCaptureService": 2.3
+  },
+  "chrome_cpu_total_pct": 57.8,
+  "daemon_cpu_pct_of_one_core": 3.49,
+  "daemon_rss_mb": 2.9,
+  "sink_video_tags_per_sec": 30.23,
+  "encoded_frames_per_sec": 30.18
+ },
+ "visibilityAfterReturn": "visible",
+ "foregroundAgain": {
+  "label": "foreground-again",
+  "seconds": 8,
+  "chrome_cpu_pct_of_one_core_by_process_type": {
+   "browser": 4.9,
+   "renderer": 37.1,
+   "GPU": 19.8,
+   "network.mojom.NetworkService": 1.6,
+   "storage.mojom.StorageService": 0,
+   "audio.mojom.AudioService": 2.9,
+   "video_capture.mojom.VideoCaptureService": 2.6
+  },
+  "chrome_cpu_total_pct": 68.9,
+  "daemon_cpu_pct_of_one_core": 3.99,
+  "daemon_rss_mb": 2.8,
+  "sink_video_tags_per_sec": 30.28,
+  "encoded_frames_per_sec": 30.4
+ },
+ "flv": {
+  "problems": [],
+  "sessions": 1,
+  "videoTags": 1958,
+  "audioTags": 3204,
+  "scriptTags": 1,
+  "rtmpCommands": [
+   "connect",
+   "releaseStream",
+   "FCPublish",
+   "createStream",
+   "publish"
+  ],
+  "publishedKey": "e2e_key",
+  "protocolErrors": [],
+  "firstVideoNaluIsKeyframe": true,
+  "keyframeIntervalMs": {
+   "n": 32,
+   "mean": 2041.81,
+   "sd": 357.52,
+   "min": 1815,
+   "p50": 1980,
+   "p95": 2016,
+   "p99": 4025,
+   "max": 4025
+  },
+  "avgFpsFromTimestamps": 29.33,
+  "interFrameMs": {
+   "n": 1955,
+   "mean": 34.1,
+   "sd": 31.54,
+   "min": 14,
+   "p50": 33,
+   "p95": 35,
+   "p99": 38,
+   "max": 1342
+  },
+  "gapsOver2Frames": 5,
+  "estimatedMissedFrames": 65,
+  "sinkFpsPerSecond": {
+   "n": 66,
+   "mean": 29.24,
+   "sd": 5.01,
+   "min": 1,
+   "p50": 30,
+   "p95": 33,
+   "p99": 37,
+   "max": 37
+  },
+  "videoKbps": 354
+ },
+ "tagDebug": {
+  "first": [
+   [
+    18,
+    0,
+    0
+   ],
+   [
+    8,
+    0,
+    0
+   ],
+   [
+    8,
+    0,
+    1
+   ],
+   [
+    8,
+    21,
+    1
+   ],
+   [
+    8,
+    42,
+    1
+   ],
+   [
+    8,
+    64,
+    1
+   ],
+   [
+    8,
+    85,
+    1
+   ],
+   [
+    8,
+    106,
+    1
+   ],
+   [
+    8,
+    128,
+    1
+   ],
+   [
+    8,
+    149,
+    1
+   ],
+   [
+    8,
+    170,
+    1
+   ],
+   [
+    8,
+    192,
+    1
+   ],
+   [
+    8,
+    213,
+    1
+   ],
+   [
+    8,
+    234,
+    1
+   ]
+  ],
+  "backwardsIdx": -1,
+  "around": null
+ },
+ "latency": {
+  "definition": "wall time the video tag reaches the RTMP sink minus wall time of the frame's compositor timestamp (canvas draw -> VideoFrame -> encode -> WS -> daemon -> RTMP). Excludes camera capture/driver latency and any player/CDN.",
+  "base_consistency_sd_ms": 0,
+  "matched": 1940,
+  "compose_to_sink_ms": {
+   "n": 1940,
+   "mean": 40.74,
+   "sd": 181.04,
+   "min": 5.24,
+   "p50": 11.76,
+   "p95": 121.07,
+   "p99": 333.16,
+   "max": 2468.03
+  },
+  "socket_to_sink_ms": {
+   "n": 1940,
+   "mean": 7.7,
+   "sd": 52.01,
+   "min": 1.49,
+   "p50": 3.4,
+   "p95": 16.37,
+   "p99": 57.24,
+   "max": 1704.87
+  },
+  "encode_ms_compose_to_socket": {
+   "n": 1940,
+   "mean": 33.04,
+   "sd": 163.25,
+   "min": 2.9,
+   "p50": 7.9,
+   "p95": 100.9,
+   "p99": 310.9,
+   "max": 2360.9
+  }
+ },
+ "timeline": [
+  {
+   "t": 0,
+   "frames": 100,
+   "lat_p50": 19.05,
+   "lat_max": 120.22
+  },
+  {
+   "t": 5,
+   "frames": 132,
+   "lat_p50": 18.6,
+   "lat_max": 439.44
+  },
+  {
+   "t": 10,
+   "frames": 108,
+   "lat_p50": 20.46,
+   "lat_max": 2468.03
+  },
+  {
+   "t": 15,
+   "frames": 152,
+   "lat_p50": 9.98,
+   "lat_max": 190.88
+  },
+  {
+   "t": 20,
+   "frames": 151,
+   "lat_p50": 46.93,
+   "lat_max": 295.96
+  },
+  {
+   "t": 25,
+   "frames": 152,
+   "lat_p50": 7.54,
+   "lat_max": 114.42
+  },
+  {
+   "t": 30,
+   "frames": 152,
+   "lat_p50": 8.21,
+   "lat_max": 27.85
+  },
+  {
+   "t": 35,
+   "frames": 151,
+   "lat_p50": 10.27,
+   "lat_max": 77.16
+  },
+  {
+   "t": 40,
+   "frames": 152,
+   "lat_p50": 7.61,
+   "lat_max": 15.18
+  },
+  {
+   "t": 45,
+   "frames": 151,
+   "lat_p50": 9.93,
+   "lat_max": 24.18
+  },
+  {
+   "t": 50,
+   "frames": 151,
+   "lat_p50": 12.56,
+   "lat_max": 366.29
+  },
+  {
+   "t": 55,
+   "frames": 151,
+   "lat_p50": 11.66,
+   "lat_max": 55.06
+  },
+  {
+   "t": 60,
+   "frames": 150,
+   "lat_p50": 16.14,
+   "lat_max": 345.51
+  },
+  {
+   "t": 65,
+   "frames": 87,
+   "lat_p50": 13.13,
+   "lat_max": 71.57
+  }
+ ],
+ "marks": [
+  {
+   "name": "start_stream",
+   "t": 0
+  },
+  {
+   "name": "foreground-begin",
+   "t": 4.8
+  },
+  {
+   "name": "clip-begin",
+   "t": 35
+  },
+  {
+   "name": "clip-end",
+   "t": 35
+  },
+  {
+   "name": "background-begin",
+   "t": 35
+  },
+  {
+   "name": "background-end",
+   "t": 58.1
+  }
+ ],
+ "audioSent": {
+  "n": 3173,
+  "first": [
+   3,
+   24,
+   45,
+   67,
+   88,
+   109,
+   131,
+   152
+  ],
+  "nonIncreasing": 0,
+  "deltaMs": {
+   "n": 3172,
+   "mean": 21.33,
+   "sd": 0.47,
+   "min": 21,
+   "p50": 21,
+   "p95": 22,
+   "p99": 22,
+   "max": 22
+  },
+  "backwardsAt": []
+ },
+ "pageMetrics": {
+  "fps": {
+   "last": 30,
+   "max": 31,
+   "avg": 29.98
+  },
+  "enc_dropped": {
+   "last": 105,
+   "max": 105,
+   "avg": 93.48
+  },
+  "ws_dropped": {
+   "last": 0,
+   "max": 0,
+   "avg": 0
+  },
+  "kbps": {
+   "last": 663,
+   "max": 698,
+   "avg": 421.12
+  }
+ },
+ "pageDiag": {
+  "encoder": "software",
+  "bitrateMode": "constant",
+  "warnings": [
+   "hardware H.264 encoder produced no output; falling back to software"
+  ],
+  "dests": {
+   "twitch": {
+    "state": "live",
+    "dropped": 0
+   }
+  },
+  "errors": [],
+  "lastDaemonStatus": {
+   "type": "stats",
+   "uptime_ms": 66272,
+   "in_kbps": 663,
+   "dests": {
+    "twitch": {
+     "state": "live",
+     "dropped": 0
+    }
+   }
+  },
+  "audioChunksSent": 3173
+ },
+ "decode": {
+  "streams": [
+   {
+    "codec": "aac",
+    "type": "audio",
+    "fps": "0/0",
+    "sr": "44100",
+    "ch": 2
+   },
+   {
+    "codec": "h264",
+    "profile": "High",
+    "type": "video",
+    "w": 1280,
+    "h": 720,
+    "fps": "30/1"
+   }
+  ],
+  "duration": 68.3,
+  "ffmpegErrors": "[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 117 >= 117\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 120 >= 120\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 122 >= 122\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 130 >= 130\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 219 >= 219\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 221 >= 221\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 416 >= 416\n[null @ 0x713044280] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 418 >= 418"
+ },
+ "pageErrors": [
+  "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+ ],
+ "daemonLogTail": [
+  "koinonia-d: ws://127.0.0.1:36582/ingest  clip buffer 120s -> /var/folders/4h/5ghf4vt17zs9b7cq8vrtz6sh0000gn/T/koinonia-e2e-j0AFfj/clips/",
+  "  destination: twitch (rtmp://127.0.0.1:53579/live, key ****)",
+  "info(session): ingest connected",
+  ""
+ ]
+}

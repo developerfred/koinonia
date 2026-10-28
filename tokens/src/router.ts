@@ -76,7 +76,9 @@ export class ModelRouter {
     if (req.degradeSteps) {
       const d = lowerTier(tier, req.degradeSteps);
       const floor = this.cfg.floor ?? "small";
-      const lowered = ["small", "medium", "large"].indexOf(d) < ["small", "medium", "large"].indexOf(floor) ? floor : d;
+      const order = ["small", "medium", "large"];
+      // The floor only stops degradation early; it must never raise the tier above the natural one.
+      const lowered = order.indexOf(d) < order.indexOf(floor) ? (order.indexOf(floor) < order.indexOf(tier) ? floor : tier) : d;
       if (lowered !== tier) reason += `+degraded(${tier}->${lowered})`;
       tier = lowered;
     }

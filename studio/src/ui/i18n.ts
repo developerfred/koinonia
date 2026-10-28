@@ -18,7 +18,7 @@ export const pt = {
   "health.good": "Tudo certo",
   "health.warn": "Atenção",
   "health.bad": "Problema",
-  "health.reason.kbps": "Taxa de envio baixa ({v} kbps)",
+  "health.reason.kbps": "Taxa de envio baixa ({v} kbps). Causas comuns: cena quase parada (o codificador gasta menos quando nada muda) ou rede lenta. Plataformas podem mostrar aviso de bitrate baixo; se ele persistir com movimento na cena, verifique o aviso no painel da plataforma e reduza a resolução ou a taxa configurada.",
   "health.reason.fps": "Quadros por segundo baixos ({v} fps)",
   "health.reason.dropped": "Quadros descartados ({v}/s)",
   "health.reason.errors": "Erros recentes no codificador",

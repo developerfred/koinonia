@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 import { existsSync } from "node:fs";
 import { P } from "../lib/env";
-import { gap } from "../lib/gap";
 
 const has = (f: string) => existsSync(`${P.tokens}/src/${f}`);
 const runs = Number(process.env.QA_PROP_RUNS ?? 300);
@@ -165,7 +164,7 @@ describe.runIf(has("router.ts") && has("models.ts"))("ModelRouter", async () => 
     }), opt(14));
   });
 
-  gap("tokens.router.floor-raises")("degrading never RAISES the tier even when floor is above the natural tier", () => {
+  it("degrading never RAISES the tier even when floor is above the natural tier", () => {
     fc.assert(fc.property(req, (r) => {
       const router = new ModelRouter({ floor: "medium" });
       const base = rank[router.route(r).tier];
